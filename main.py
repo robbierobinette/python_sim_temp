@@ -43,6 +43,18 @@ def main():
         help="Number of candidates per party (default: 3)"
     )
     parser.add_argument(
+        "--voters", 
+        type=int,
+        default=1000,
+        help="Number of voters per district (default: 1000)"
+    )
+    parser.add_argument(
+        "--uncertainty", 
+        type=float,
+        default=0.5,
+        help="Amount of voter uncertainty (default: 0.5)"
+    )
+    parser.add_argument(
         "--verbose", 
         action="store_true",
         help="Enable verbose output"
@@ -84,7 +96,7 @@ def main():
     # Create simulation configuration
     gaussian_generator = GaussianGenerator(args.seed)
     config = CongressionalSimulationConfigFactory.create_config(
-        args.candidates, gaussian_generator
+        args.candidates, gaussian_generator, args.voters, args.uncertainty
     )
     
     if args.verbose:

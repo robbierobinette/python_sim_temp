@@ -43,6 +43,12 @@ class CongressionalSimulationConfig:
 class UnitSimulationConfig(CongressionalSimulationConfig):
     """Unit simulation configuration."""
     
+    def __init__(self, label: str, config: ElectionConfig, pop_config: PopulationConfiguration,
+                 candidate_generator: CandidateGenerator, primary_skew: float, n_voters: int = 1000):
+        """Initialize unit simulation configuration."""
+        super().__init__(label, config, pop_config, candidate_generator, primary_skew)
+        self.n_voters = n_voters
+    
     def generate_definition(self, dvr, gaussian_generator: Optional[GaussianGenerator] = None):
         """Generate election definition for a district."""
         from .unit_population import UnitPopulation
@@ -53,7 +59,8 @@ class UnitSimulationConfig(CongressionalSimulationConfig):
         
         district_pop = UnitPopulation.create_with_params(
             dvr, self.pop_config.partisanship, self.pop_config.stddev, 
-            self.pop_config.population_skew, 1000        )
+            self.pop_config.population_skew, self.n_voters
+        )
         
         candidates = self.candidate_generator.candidates(district_pop)
         candidates.sort(key=lambda c: c.ideology)
@@ -66,13 +73,15 @@ class CongressionalSimulationConfigFactory:
     
     @staticmethod
     def create_config(n_party_candidates: int, 
-                     gaussian_generator: Optional[GaussianGenerator] = None) -> UnitSimulationConfig:
+                     gaussian_generator: Optional[GaussianGenerator] = None,
+                     n_voters: int = 1000,
+                     uncertainty: float = 0.5) -> UnitSimulationConfig:
         """Create simulation configuration."""
         if gaussian_generator is None:
             gaussian_generator = GaussianGenerator()
         
         election_config = ElectionConfig(
-            uncertainty=0.0,
+            uncertainty=uncertainty,
             party_loyalty=1.0,
             quality_scale=1.0,
             party_bonus_scale=1.0,
@@ -103,5 +112,6 @@ class CongressionalSimulationConfigFactory:
             config=election_config,
             pop_config=population_config,
             candidate_generator=candidate_generator,
-            primary_skew=0.5
+            primary_skew=0.5,
+            n_voters=n_voters
         )
