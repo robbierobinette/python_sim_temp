@@ -3,54 +3,46 @@ Visualization utilities for congressional election simulation results.
 """
 import matplotlib.pyplot as plt
 import numpy as np
-from typing import List, Dict, Optional
-from congressional_simulation import CongressionalSimulationResult, DistrictResult
+from typing import Optional
+from congressional_simulation import CongressionalSimulationResult
 
 
 def plot_winner_ideology_histogram(result: CongressionalSimulationResult, 
                                  save_path: Optional[str] = None,
                                  show_plot: bool = True) -> None:
-    """Plot histogram of winning candidate ideologies."""
+    """Plot histogram of all winning candidate ideologies."""
     
-    # Separate ideologies by party
-    dem_ideologies = [dr.winner_ideology for dr in result.district_results if dr.winner_party == "Dem"]
-    rep_ideologies = [dr.winner_ideology for dr in result.district_results if dr.winner_party == "Rep"]
-    other_ideologies = [dr.winner_ideology for dr in result.district_results if dr.winner_party not in ["Dem", "Rep"]]
+    # Get all ideologies (not separated by party)
+    all_ideologies = [dr.winner_ideology for dr in result.district_results]
     
     # Create figure
     fig, ax = plt.subplots(figsize=(12, 8))
     
-    # Plot histograms
-    if dem_ideologies:
-        ax.hist(dem_ideologies, bins=30, alpha=0.7, label=f'Democrats ({len(dem_ideologies)})', 
-                color='blue', density=True)
+    if not all_ideologies:
+        print("No data to plot")
+        return
     
-    if rep_ideologies:
-        ax.hist(rep_ideologies, bins=30, alpha=0.7, label=f'Republicans ({len(rep_ideologies)})', 
-                color='red', density=True)
+    # Create bins with fixed scale from -2 to 2
+    bins = np.linspace(-2, 2, 41)
     
-    if other_ideologies:
-        ax.hist(other_ideologies, bins=30, alpha=0.7, label=f'Other ({len(other_ideologies)})', 
-                color='green', density=True)
+    # Plot histogram with raw counts
+    ax.hist(all_ideologies, bins=bins, alpha=0.7, color='steelblue', edgecolor='black', linewidth=0.5)
     
     # Customize plot
     ax.set_xlabel('Winner Ideology', fontsize=12)
-    ax.set_ylabel('Density', fontsize=12)
-    ax.set_title('Distribution of Winning Candidate Ideologies', fontsize=14, fontweight='bold')
-    ax.legend()
+    ax.set_ylabel('Count', fontsize=12)
+    ax.set_title('Distribution of All Winning Candidate Ideologies', fontsize=14, fontweight='bold')
     ax.grid(True, alpha=0.3)
     
     # Add vertical line at 0 (center)
-    ax.axvline(x=0, color='black', linestyle='--', alpha=0.5, label='Center (0)')
+    ax.axvline(x=0, color='red', linestyle='--', alpha=0.7, linewidth=2)
     
     # Add statistics text
-    all_ideologies = dem_ideologies + rep_ideologies + other_ideologies
-    if all_ideologies:
-        mean_ideology = np.mean(all_ideologies)
-        std_ideology = np.std(all_ideologies)
-        ax.text(0.02, 0.98, f'Mean: {mean_ideology:.2f}\nStd: {std_ideology:.2f}', 
-                transform=ax.transAxes, verticalalignment='top',
-                bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+    mean_ideology = np.mean(all_ideologies)
+    std_ideology = np.std(all_ideologies)
+    ax.text(0.02, 0.98, f'Total: {len(all_ideologies)}\nMean: {mean_ideology:.2f}\nStd: {std_ideology:.2f}', 
+            transform=ax.transAxes, verticalalignment='top',
+            bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
     
     plt.tight_layout()
     
@@ -67,44 +59,36 @@ def plot_winner_ideology_histogram(result: CongressionalSimulationResult,
 def plot_voter_satisfaction_histogram(result: CongressionalSimulationResult,
                                     save_path: Optional[str] = None,
                                     show_plot: bool = True) -> None:
-    """Plot histogram of voter satisfaction by party."""
+    """Plot histogram of all voter satisfaction values."""
     
-    # Separate satisfaction by party
-    dem_satisfaction = [dr.voter_satisfaction for dr in result.district_results if dr.winner_party == "Dem"]
-    rep_satisfaction = [dr.voter_satisfaction for dr in result.district_results if dr.winner_party == "Rep"]
-    other_satisfaction = [dr.voter_satisfaction for dr in result.district_results if dr.winner_party not in ["Dem", "Rep"]]
+    # Get all satisfaction values (not separated by party)
+    all_satisfaction = [dr.voter_satisfaction for dr in result.district_results]
     
     # Create figure
     fig, ax = plt.subplots(figsize=(12, 8))
     
-    # Plot histograms
-    if dem_satisfaction:
-        ax.hist(dem_satisfaction, bins=20, alpha=0.7, label=f'Democratic Districts ({len(dem_satisfaction)})', 
-                color='blue', density=True)
+    if not all_satisfaction:
+        print("No data to plot")
+        return
     
-    if rep_satisfaction:
-        ax.hist(rep_satisfaction, bins=20, alpha=0.7, label=f'Republican Districts ({len(rep_satisfaction)})', 
-                color='red', density=True)
+    # Create bins
+    bins = np.linspace(min(all_satisfaction), max(all_satisfaction), 21)
     
-    if other_satisfaction:
-        ax.hist(other_satisfaction, bins=20, alpha=0.7, label=f'Other Districts ({len(other_satisfaction)})', 
-                color='green', density=True)
+    # Plot histogram with raw counts
+    ax.hist(all_satisfaction, bins=bins, alpha=0.7, color='forestgreen', edgecolor='black', linewidth=0.5)
     
     # Customize plot
     ax.set_xlabel('Voter Satisfaction', fontsize=12)
-    ax.set_ylabel('Density', fontsize=12)
-    ax.set_title('Distribution of Voter Satisfaction by Winning Party', fontsize=14, fontweight='bold')
-    ax.legend()
+    ax.set_ylabel('Count', fontsize=12)
+    ax.set_title('Distribution of All Voter Satisfaction Values', fontsize=14, fontweight='bold')
     ax.grid(True, alpha=0.3)
     
     # Add statistics text
-    all_satisfaction = dem_satisfaction + rep_satisfaction + other_satisfaction
-    if all_satisfaction:
-        mean_satisfaction = np.mean(all_satisfaction)
-        std_satisfaction = np.std(all_satisfaction)
-        ax.text(0.02, 0.98, f'Mean: {mean_satisfaction:.3f}\nStd: {std_satisfaction:.3f}', 
-                transform=ax.transAxes, verticalalignment='top',
-                bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+    mean_satisfaction = np.mean(all_satisfaction)
+    std_satisfaction = np.std(all_satisfaction)
+    ax.text(0.02, 0.98, f'Total: {len(all_satisfaction)}\nMean: {mean_satisfaction:.3f}\nStd: {std_satisfaction:.3f}', 
+            transform=ax.transAxes, verticalalignment='top',
+            bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
     
     plt.tight_layout()
     
@@ -180,7 +164,16 @@ def plot_party_win_map(result: CongressionalSimulationResult,
         state = dr.state
         if state not in state_wins:
             state_wins[state] = {'Dem': 0, 'Rep': 0, 'Other': 0}
-        state_wins[state][dr.winner_party] += 1
+        
+        # Map party to category
+        if dr.winner_party == "Dem":
+            party_category = "Dem"
+        elif dr.winner_party == "Rep":
+            party_category = "Rep"
+        else:
+            party_category = "Other"
+        
+        state_wins[state][party_category] += 1
     
     # Sort states by total districts
     states = sorted(state_wins.keys(), key=lambda s: sum(state_wins[s].values()), reverse=True)
@@ -230,26 +223,34 @@ def create_all_visualizations(result: CongressionalSimulationResult,
     """Create all visualizations and save them to files."""
     import os
     
-    # Create output directory if it doesn't exist
-    os.makedirs(output_dir, exist_ok=True)
+    # Create output directory if it doesn't exist and we're saving files
+    if output_dir is not None:
+        os.makedirs(output_dir, exist_ok=True)
     
     print("Creating visualizations...")
     
     # Create all plots
+    save_path_1 = os.path.join(output_dir, "winner_ideology_histogram.png") if output_dir else None
     plot_winner_ideology_histogram(result, 
-                                  save_path=os.path.join(output_dir, "winner_ideology_histogram.png"),
+                                  save_path=save_path_1,
                                   show_plot=show_plots)
     
+    save_path_2 = os.path.join(output_dir, "voter_satisfaction_histogram.png") if output_dir else None
     plot_voter_satisfaction_histogram(result,
-                                    save_path=os.path.join(output_dir, "voter_satisfaction_histogram.png"),
+                                    save_path=save_path_2,
                                     show_plot=show_plots)
     
+    save_path_3 = os.path.join(output_dir, "ideology_vs_satisfaction.png") if output_dir else None
     plot_ideology_vs_satisfaction_scatter(result,
-                                        save_path=os.path.join(output_dir, "ideology_vs_satisfaction.png"),
+                                        save_path=save_path_3,
                                         show_plot=show_plots)
     
+    save_path_4 = os.path.join(output_dir, "party_wins_by_state.png") if output_dir else None
     plot_party_win_map(result,
-                      save_path=os.path.join(output_dir, "party_wins_by_state.png"),
+                      save_path=save_path_4,
                       show_plot=show_plots)
     
-    print(f"All visualizations saved to {output_dir}/")
+    if output_dir:
+        print(f"All visualizations saved to {output_dir}/")
+    else:
+        print("Visualizations displayed (not saved)")

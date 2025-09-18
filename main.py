@@ -40,7 +40,7 @@ def main():
         "--candidates", 
         type=int,
         default=3,
-        help="Number of candidates per party (default: 3)"
+        help="Number of candidates: per party for partisan/normal-partisan, total for random/condorcet (default: 3)"
     )
     parser.add_argument(
         "--verbose", 
@@ -49,7 +49,7 @@ def main():
     )
     parser.add_argument(
         "--election-type", 
-        choices=["primary", "instant_runoff", "head_to_head"],
+        choices=["primary", "instant_runoff", "condorcet"],
         default="primary",
         help="Type of election to run (default: primary)"
     )
@@ -68,6 +68,48 @@ def main():
         action="store_true",
         help="Generate only the winner ideology histogram"
     )
+    parser.add_argument(
+        "--nvoters", 
+        type=int,
+        default=1000,
+        help="Number of voters per district (default: 1000)"
+    )
+    parser.add_argument(
+        "--uncertainty", 
+        type=float,
+        default=0.1,
+        help="Voter uncertainty factor (default: 0.0)"
+    )
+    parser.add_argument(
+        "--primary-skew", 
+        type=float,
+        default=0.25,
+        help="Primary election skew factor (default: 0.5)"
+    )
+    parser.add_argument(
+        "--candidate-generator", 
+        choices=["partisan", "condorcet", "random", "normal-partisan"],
+        default="partisan",
+        help="Type of candidate generator to use (default: partisan)"
+    )
+    parser.add_argument(
+        "--condorcet-variance", 
+        type=float,
+        default=0.1,
+        help="Ideology variance for Condorcet candidates (default: 0.5)"
+    )
+    parser.add_argument(
+        "--ideology-variance", 
+        type=float,
+        default=0.10,
+        help="Ideology variance for candidates (default: 0.20)"
+    )
+    parser.add_argument(
+        "--spread", 
+        type=float,
+        default=0.4,
+        help="Spread for partisan candidate generator (default: 0.4)"
+    )
     
     args = parser.parse_args()
     
@@ -83,9 +125,19 @@ def main():
     
     # Create simulation configuration
     gaussian_generator = GaussianGenerator(args.seed)
-    config = CongressionalSimulationConfigFactory.create_config(
-        args.candidates, gaussian_generator
-    )
+    config_params = {
+        'candidates': args.candidates,
+        'gaussian_generator': gaussian_generator,
+        'nvoters': args.nvoters,
+        'uncertainty': args.uncertainty,
+        'primary_skew': args.primary_skew,
+        'candidate_generator_type': args.candidate_generator,
+        'condorcet_variance': args.condorcet_variance,
+        'election_type': args.election_type,
+        'ideology_variance': args.ideology_variance,
+        'spread': args.spread
+    }
+    config = CongressionalSimulationConfigFactory.create_config(config_params)
     
     if args.verbose:
         print(f"Configuration: {config.describe()}")
@@ -130,21 +182,28 @@ def main():
         print(f"Average satisfaction in Republican districts: {rep_satisfaction:.3f}")
         
         # Generate visualizations if requested
-        if args.plot or args.histogram_only:
+        if args.plot or args.histogram_only or args.plot_dir != "plots":
             try:
-                # Create plot directory if it doesn't exist
-                os.makedirs(args.plot_dir, exist_ok=True)
+                # Determine if we should save files and show plots
+                save_files = args.plot_dir != "plots"  # Only save if plot-dir was explicitly specified
+                show_plots = args.plot  # Only show if --plot was specified
+                
+                if save_files:
+                    # Create plot directory if it doesn't exist
+                    os.makedirs(args.plot_dir, exist_ok=True)
                 
                 if args.histogram_only:
-                    print(f"\nGenerating winner ideology histogram...")
+                    print("\nGenerating winner ideology histogram...")
+                    save_path = os.path.join(args.plot_dir, "winner_ideology_histogram.png") if save_files else None
                     plot_winner_ideology_histogram(result, 
-                                                 save_path=os.path.join(args.plot_dir, "winner_ideology_histogram.png"),
-                                                 show_plot=args.plot)
+                                                 save_path=save_path,
+                                                 show_plot=show_plots)
                 else:
-                    print(f"\nGenerating all visualizations...")
+                    print("\nGenerating all visualizations...")
+                    output_dir = args.plot_dir if save_files else None
                     create_all_visualizations(result, 
-                                            output_dir=args.plot_dir,
-                                            show_plots=args.plot)
+                                            output_dir=output_dir,
+                                            show_plots=show_plots)
             except ImportError as e:
                 print(f"Warning: Could not generate plots - {e}")
                 print("Make sure matplotlib and numpy are installed: pip install matplotlib numpy")

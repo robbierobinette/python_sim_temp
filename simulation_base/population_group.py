@@ -73,11 +73,11 @@ class PopulationGroup:
     
     def party_bonus_for(self, other: PopulationTag) -> float:
         """Get party bonus for another party."""
-        return self.tag.party_loyalty(other)
+        return self.tag.party_affinity(other)
     
     def party_bonus_for_group(self, other: 'PopulationGroup') -> float:
         """Get party bonus for another population group."""
-        return self.tag.party_loyalty(other.tag)
+        return self.tag.party_affinity(other.tag)
     
     def population_sample(self, n_samples: int) -> List['Voter']:
         """Generate a sample of voters from this population group."""
@@ -98,7 +98,7 @@ class PopulationGroup:
         return Voter(party=self, ideology=ideology)
     
     def random_candidate(self, name: str, ideology_stddev: float, 
-                        money_stddev: float, quality_stddev: float,
+                        quality_stddev: float,
                         gaussian_generator: Optional[GaussianGenerator] = None) -> Candidate:
         """Generate a random candidate from this group."""
         if gaussian_generator is None:
@@ -107,7 +107,6 @@ class PopulationGroup:
             name=name,
             tag=self.tag,
             ideology=self.mean + gaussian_generator() * ideology_stddev,
-            money=gaussian_generator() * money_stddev,
             quality=gaussian_generator() * quality_stddev,
             incumbent=False
         )

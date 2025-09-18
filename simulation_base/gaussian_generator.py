@@ -27,7 +27,8 @@ class GaussianGenerator:
     
     def __call__(self) -> float:
         """Generate Gaussian random number."""
-        return self._random.gauss(0, 1)
+        v = self._random.gauss(0, 1)
+        return v
 
 
 # Global generator instance

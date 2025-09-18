@@ -62,6 +62,21 @@ class CongressionalSimulationResult:
 class CongressionalSimulation:
     """Simulates elections for all 435 congressional districts."""
     
+    # State name to abbreviation mapping
+    STATE_ABBREVIATIONS = {
+        'Alabama': 'AL', 'Alaska': 'AK', 'Arizona': 'AZ', 'Arkansas': 'AR', 'California': 'CA',
+        'Colorado': 'CO', 'Connecticut': 'CT', 'Delaware': 'DE', 'Florida': 'FL', 'Georgia': 'GA',
+        'Hawaii': 'HI', 'Idaho': 'ID', 'Illinois': 'IL', 'Indiana': 'IN', 'Iowa': 'IA',
+        'Kansas': 'KS', 'Kentucky': 'KY', 'Louisiana': 'LA', 'Maine': 'ME', 'Maryland': 'MD',
+        'Massachusetts': 'MA', 'Michigan': 'MI', 'Minnesota': 'MN', 'Mississippi': 'MS', 'Missouri': 'MO',
+        'Montana': 'MT', 'Nebraska': 'NE', 'Nevada': 'NV', 'New Hampshire': 'NH', 'New Jersey': 'NJ',
+        'New Mexico': 'NM', 'New York': 'NY', 'North Carolina': 'NC', 'North Dakota': 'ND', 'Ohio': 'OH',
+        'Oklahoma': 'OK', 'Oregon': 'OR', 'Pennsylvania': 'PA', 'Rhode Island': 'RI', 'South Carolina': 'SC',
+        'South Dakota': 'SD', 'Tennessee': 'TN', 'Texas': 'TX', 'Utah': 'UT', 'Vermont': 'VT',
+        'Virginia': 'VA', 'Washington': 'WA', 'West Virginia': 'WV', 'Wisconsin': 'WI', 'Wyoming': 'WY',
+        'District of Columbia': 'DC'
+    }
+    
     def __init__(self, config: Optional[UnitSimulationConfig] = None, 
                  gaussian_generator: Optional[GaussianGenerator] = None,
                  election_type: str = "primary"):
@@ -70,15 +85,15 @@ class CongressionalSimulation:
         Args:
             config: Simulation configuration
             gaussian_generator: Random number generator
-            election_type: Type of election ("primary", "instant_runoff", "head_to_head")
+            election_type: Type of election ("primary", "instant_runoff", "condorcet")
         """
         self.config = config or CongressionalSimulationConfigFactory.create_config(3)
         self.gaussian_generator = gaussian_generator or GaussianGenerator()
         self.election_type = election_type
         
         if election_type == "primary":
-            self.election_process = ElectionWithPrimary(primary_skew=0, debug=False)
-        elif election_type == "head_to_head":
+            self.election_process = ElectionWithPrimary(primary_skew=self.config.primary_skew, debug=False)
+        elif election_type == "condorcet":
             self.election_process = HeadToHeadElection(debug=False)
         else:  # instant_runoff
             self.election_process = InstantRunoffElection(debug=False)
@@ -103,9 +118,28 @@ class CongressionalSimulation:
                 else:
                     expected_lean = 0.0
                 
+                # Format district name with state abbreviation and zero-padded number
+                state_name = row['State']
+                state_abbrev = self.STATE_ABBREVIATIONS.get(state_name, state_name[:2].upper())
+                district_number = row['Number']
+                
+                # Handle at-large districts (AL) by converting to 01
+                if district_number.upper() == 'AL':
+                    district_number = '01'
+                else:
+                    # Zero-pad district numbers
+                    try:
+                        district_num = int(district_number)
+                        district_number = f"{district_num:02d}"
+                    except ValueError:
+                        # If not a number, keep as is
+                        pass
+                
+                district_name = f"{state_abbrev}-{district_number}"
+                
                 # Create district record
                 district = DistrictVotingRecord(
-                    district=f"{row['State']}-{row['Number']}",
+                    district=district_name,
                     incumbent=row['Member'],
                     expected_lean=expected_lean,
                     d_pct1=50.0 - expected_lean / 2,  # Approximate from lean
@@ -146,10 +180,6 @@ class CongressionalSimulation:
         # Extract winner information
         winner = result.winner
         ordered_results = result.ordered_results
-        
-        # Check if median candidate won in general election and print detailed info
-        if winner.name in ['R-V', 'D-V']:
-            self._print_median_candidate_details(district, election_def, result)
         
         # Calculate margin
         margin = 0.0

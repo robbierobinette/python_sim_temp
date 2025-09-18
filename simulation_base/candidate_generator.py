@@ -41,7 +41,6 @@ class CandidateGenerator(ABC):
                 name=name,
                 tag=party.tag,
                 ideology=ideology,
-                money=0,
                 quality=gaussian_generator() * self.quality_variance,
                 incumbent=False
             )
@@ -60,10 +59,8 @@ class CandidateGenerator(ABC):
             name=f"{mv_tag.initial}-V",
             tag=mv_tag,
             ideology=population.median_voter + gaussian_generator() * 0.05,
-            money=gaussian_generator() * 0,
             quality=gaussian_generator() * self.quality_variance,
             incumbent=False,
-            median_voter=True
         )
 
 
@@ -82,17 +79,23 @@ class PartisanCandidateGenerator(CandidateGenerator):
         self.gaussian_generator = gaussian_generator or GaussianGenerator()
     
     def get_partisan_candidates(self, population_group: PopulationGroup, 
-                               population: CombinedPopulation, i: int) -> List[Candidate]:
+                               population: CombinedPopulation, n_candidates: int) -> List[Candidate]:
         """Generate partisan candidates for a population group."""
         skew = self.primary_skew if population_group.tag == REPUBLICANS else -self.primary_skew
         party_base = population_group.mean + skew
         offset = self.spread * population_group.stddev * (1 if population_group.tag == REPUBLICANS else -1)
         
-        ideologies = [
-            party_base - offset,
-            party_base,
-            party_base + offset
-        ]
+        # Generate ideologies based on number of candidates
+        if n_candidates == 1:
+            ideologies = [party_base]
+        elif n_candidates == 2:
+            ideologies = [party_base - offset, party_base + offset]
+        else:  # 3 or more candidates
+            ideologies = [party_base - offset, party_base, party_base + offset]
+            # Add more candidates if needed
+            if n_candidates > 3:
+                step = (2 * offset) / (n_candidates - 1)
+                ideologies = [party_base - offset + i * step for i in range(n_candidates)]
         
         candidates = []
         for idx, ideology in enumerate(ideologies):
@@ -100,10 +103,8 @@ class PartisanCandidateGenerator(CandidateGenerator):
                 name=f"{population_group.tag.initial}-{idx + 1}",
                 tag=population_group.tag,
                 ideology=ideology + self.gaussian_generator() * self.ideology_variance,
-                money=0,
                 quality=self.gaussian_generator() * self.quality_variance,
                 incumbent=False,
-                median_voter=False
             )
             candidates.append(candidate)
         
@@ -116,6 +117,54 @@ class PartisanCandidateGenerator(CandidateGenerator):
         median = self.get_median_candidate(population, self.gaussian_generator)
         
         return dems + [median] + reps
+
+
+class NormalPartisanCandidateGenerator(CandidateGenerator):
+    """Generates partisan candidates from normal distributions with a median candidate."""
+    
+    def __init__(self, n_partisan_candidates: int, ideology_variance: float, quality_variance: float,
+                 gaussian_generator: Optional[GaussianGenerator] = None):
+        """Initialize normal partisan candidate generator."""
+        super().__init__(quality_variance)
+        self.n_partisan_candidates = n_partisan_candidates
+        self.ideology_variance = ideology_variance
+        self.gaussian_generator = gaussian_generator or GaussianGenerator()
+    
+    def candidates(self, population: CombinedPopulation) -> List[Candidate]:
+        """Generate all candidates for the population."""
+        candidates = []
+        
+        # Generate Democratic candidates from normal distribution
+        for i in range(self.n_partisan_candidates):
+            # Draw from normal distribution centered at Democratic mean
+            ideology = population.democrats.mean + self.gaussian_generator() * self.ideology_variance
+            candidate = Candidate(
+                name=f"D-{i + 1}",
+                tag=DEMOCRATS,
+                ideology=ideology,
+                quality=self.gaussian_generator() * self.quality_variance,
+                incumbent=False,
+            )
+            candidates.append(candidate)
+        
+        # Add median candidate
+        median_candidate = self.get_median_candidate(population, self.gaussian_generator)
+        candidates.append(median_candidate)
+        
+        # Generate Republican candidates from normal distribution
+        for i in range(self.n_partisan_candidates):
+            # Draw from normal distribution centered at Republican mean
+            ideology = population.republicans.mean + self.gaussian_generator() * self.ideology_variance
+            candidate = Candidate(
+                name=f"R-{i + 1}",
+                tag=REPUBLICANS,
+                ideology=ideology,
+                quality=self.gaussian_generator() * self.quality_variance,
+                incumbent=False,
+            )
+            candidates.append(candidate)
+        
+        return candidates
 
 
 class RankCandidateGenerator(CandidateGenerator):
@@ -194,7 +243,6 @@ class RandomCandidateGenerator(CandidateGenerator):
                 name=f"C-{i}",
                 tag=voter.party.tag,
                 ideology=voter.ideology,
-                money=0,
                 quality=self.gaussian_generator() * self.quality_variance,
                 incumbent=False
             )
@@ -205,4 +253,56 @@ class RandomCandidateGenerator(CandidateGenerator):
             median_candidate = self.get_median_candidate(population, self.gaussian_generator)
             candidates.append(median_candidate)
         
+        return candidates
+
+
+class CondorcetCandidateGenerator(CandidateGenerator):
+    """Generates Condorcet candidates distributed around the median voter."""
+    
+    def __init__(self, n_candidates: int, ideology_variance: float, quality_variance: float,
+                 gaussian_generator: Optional[GaussianGenerator] = None):
+        """Initialize Condorcet candidate generator."""
+        super().__init__(quality_variance)
+        self.n_candidates = n_candidates
+        self.ideology_variance = ideology_variance
+        self.gaussian_generator = gaussian_generator or GaussianGenerator()
+        self.party_switch_point = 0.1
+    
+
+    def candidates(self, population: CombinedPopulation) -> List[Candidate]:
+        """Generate Condorcet candidates distributed around the median voter."""
+        candidates = []
+        median_voter_ideology = population.median_voter
+        
+        # Generate candidates distributed around the median voter
+        for i in range(self.n_candidates):
+            # Create ideology centered around median voter with specified variance
+            ideology = median_voter_ideology + self.gaussian_generator() * self.ideology_variance
+            
+            # Determine party affiliation based on ideology
+            if ideology < -self.party_switch_point:  # More liberal
+                party_tag = DEMOCRATS
+                party_initial = "D"
+            elif ideology > self.party_switch_point:  # More conservative
+                party_tag = REPUBLICANS
+                party_initial = "R"
+            else:  # Centrist
+                party_tag = INDEPENDENTS
+                party_initial = "I"
+            
+            candidate = Candidate(
+                name=f"{party_initial}-{i + 1}",
+                tag=party_tag,
+                ideology=ideology,
+                quality=self.gaussian_generator() * self.quality_variance,
+                incumbent=False,
+            )
+            candidates.append(candidate)
+        
+        # Sort candidates by ideology
+        candidates.sort(key=lambda c: c.ideology)
+        # Rename candidates to be their party-letter and then their order from most liberal to most conservative (1-based)
+        for idx, candidate in enumerate(candidates):
+            candidate.name = f"{candidate.tag.short_name[0]}-{idx + 1}"
+
         return candidates

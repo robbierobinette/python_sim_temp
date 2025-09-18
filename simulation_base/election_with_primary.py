@@ -159,7 +159,6 @@ class ElectionWithPrimary:
                            dem_primary_voters: List[Voter], rep_primary_voters: List[Voter],
                            general_result: ElectionResult) -> None:
         """Print debug information."""
-        print("Democratic Primary:")
 
         dm = sum([v.ideology for v in dem_primary_voters]) / len(dem_primary_voters)
         rm = sum([v.ideology for v in rep_primary_voters]) / len(rep_primary_voters)
@@ -169,6 +168,7 @@ class ElectionWithPrimary:
         print(f"median voter: {election_def.population.median_voter:.2f}")
 
 
+        print("Democratic Primary:")
         for cr in dem_result.ordered_results:
             print(f"{cr.candidate.name:12s} {cr.candidate.ideology:5.2f} {cr.votes:8.0f}")
         
@@ -177,14 +177,26 @@ class ElectionWithPrimary:
             print(f"{cr.candidate.name:12s} {cr.candidate.ideology:5.2f} {cr.candidate.quality:5.2f} {cr.votes:8.0f}")
         
         # If the winner of the Democratic primary is D-V, print the ideology of every voter that voted for them.
-        dem_primary_winner = dem_result.ordered_results[0].candidate
-        if dem_primary_winner.name == "D-V":
-            print("Ideologies of voters who voted for D-V in the Democratic primary:")
-            # For plurality, each voter votes for one candidate; find those who voted for D-V
-            for voter in dem_primary_voters:
-                ballot:RCVBallot = voter.ballot(dem_result.candidates, election_def.config, election_def.gaussian_generator)
-                first_choice = ballot.sorted_candidates[0].candidate
-                if first_choice.name == "D-V":
-                    print(f"{voter.ideology:.4f}")
+        # dem_primary_winner = dem_result.ordered_results[0].candidate
+        # if dem_primary_winner.name == "D-V":
+        #     print("Ideologies of voters who voted for D-V in the Democratic primary:")
+        #     # For plurality, each voter votes for one candidate; find those who voted for D-V
+        #     for voter in dem_primary_voters:
+        #         ballot:RCVBallot = voter.ballot(dem_result.candidates, election_def.config, election_def.gaussian_generator)
+        #         first_choice = ballot.sorted_candidates[0].candidate
+        #         if first_choice.name == "D-V":
+        #             print(f"{voter.ideology:.4f}")
 
+        # rep_primary_winner = rep_result.ordered_results[0].candidate
+        # if rep_primary_winner.name == "R-V":
+        #     print("Ideologies of voters who voted for R-V in the Republican primary:")
+        #     for voter in rep_primary_voters:
+        #         ballot:RCVBallot = voter.ballot(rep_result.candidates, election_def.config, election_def.gaussian_generator)
+        #         first_choice = ballot.sorted_candidates[0].candidate
+        #         if first_choice.name == "R-V":
+        #             print(f"{voter.ideology:.4f}")
+        
+        print("General Election:")
+        for cr in general_result.ordered_results:
+            print(f"{cr.candidate.name:12s} {cr.candidate.ideology:5.2f} {cr.candidate.quality:5.2f} {cr.votes:8.0f}")
 

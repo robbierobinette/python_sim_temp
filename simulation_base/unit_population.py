@@ -19,7 +19,7 @@ class UnitPopulation:
     @staticmethod
     def default_skew() -> float:
         """Default skew factor."""
-        return 0.5 / 30
+        return 0.0 / 30
     
     @staticmethod
     def default_stddev() -> float:
