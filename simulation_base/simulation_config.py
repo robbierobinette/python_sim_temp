@@ -34,7 +34,7 @@ class CongressionalSimulationConfig:
         return (f"label: {self.label} "
                 f"primarySkew: {self.primary_skew} "
                 f"qualityNoise: {self.candidate_generator.quality_variance} "
-                f"uncertainty: {self.config.uncertainty} "
+                f"uncertainty: {self.config.uncertainty} " )
 
 
 class UnitSimulationConfig(CongressionalSimulationConfig):
