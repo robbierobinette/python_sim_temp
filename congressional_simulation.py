@@ -85,7 +85,7 @@ class CongressionalSimulation:
         Args:
             config: Simulation configuration
             gaussian_generator: Random number generator
-            election_type: Type of election ("primary", "instant_runoff", "condorcet")
+            election_type: Type of election ("primary", "irv", "condorcet")
         """
         self.config = config or CongressionalSimulationConfigFactory.create_config(3)
         self.gaussian_generator = gaussian_generator or GaussianGenerator()
@@ -95,7 +95,7 @@ class CongressionalSimulation:
             self.election_process = ElectionWithPrimary(primary_skew=self.config.primary_skew, debug=False)
         elif election_type == "condorcet":
             self.election_process = HeadToHeadElection(debug=False)
-        else:  # instant_runoff
+        elif election_type == "irv":    # instant runoff
             self.election_process = InstantRunoffElection(debug=False)
     
     def load_districts(self, csv_file: str) -> List[DistrictVotingRecord]:

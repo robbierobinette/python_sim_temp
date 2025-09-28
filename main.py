@@ -49,7 +49,7 @@ def main():
     )
     parser.add_argument(
         "--election-type", 
-        choices=["primary", "instant_runoff", "condorcet"],
+        choices=["primary", "irv", "condorcet"],
         default="primary",
         help="Type of election to run (default: primary)"
     )
@@ -73,6 +73,12 @@ def main():
         type=int,
         default=1000,
         help="Number of voters per district (default: 1000)"
+    )
+    parser.add_argument(
+        "--partisan-shift", 
+        type=float,
+        default=0.01,
+        help="Partisan shift of the population (default: 0.01), meaning a shift of .01 sigma every point of partisan lean"
     )
     parser.add_argument(
         "--uncertainty", 
@@ -110,6 +116,12 @@ def main():
         default=0.4,
         help="Spread for partisan candidate generator (default: 0.4)"
     )
+    parser.add_argument(
+        "--quality-variance", 
+        type=float,
+        default=0.0,
+        help="Quality variance for candidate generation (default: 0.0)"
+    )
     
     args = parser.parse_args()
     
@@ -135,7 +147,9 @@ def main():
         'condorcet_variance': args.condorcet_variance,
         'election_type': args.election_type,
         'ideology_variance': args.ideology_variance,
-        'spread': args.spread
+        'spread': args.spread,
+        'quality_variance': args.quality_variance,
+        'partisan_shift': args.partisan_shift
     }
     config = CongressionalSimulationConfigFactory.create_config(config_params)
     

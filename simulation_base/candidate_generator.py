@@ -49,6 +49,7 @@ class CandidateGenerator(ABC):
         return candidates
     
     def get_median_candidate(self, population: CombinedPopulation,
+                             median_variance: float,
                            gaussian_generator: Optional[GaussianGenerator] = None) -> Candidate:
         """Generate a median voter candidate."""
         if gaussian_generator is None:
@@ -58,7 +59,7 @@ class CandidateGenerator(ABC):
         return Candidate(
             name=f"{mv_tag.initial}-V",
             tag=mv_tag,
-            ideology=population.median_voter + gaussian_generator() * 0.05,
+            ideology=population.median_voter + gaussian_generator() * median_variance,
             quality=gaussian_generator() * self.quality_variance,
             incumbent=False,
         )
@@ -68,7 +69,7 @@ class PartisanCandidateGenerator(CandidateGenerator):
     """Generates partisan candidates."""
     
     def __init__(self, n_party_candidates: int, spread: float, ideology_variance: float,
-                 quality_variance: float, primary_skew: float,
+                 quality_variance: float, primary_skew: float, median_variance: float,
                  gaussian_generator: Optional[GaussianGenerator] = None):
         """Initialize partisan candidate generator."""
         super().__init__(quality_variance)
@@ -76,6 +77,7 @@ class PartisanCandidateGenerator(CandidateGenerator):
         self.spread = spread
         self.ideology_variance = ideology_variance
         self.primary_skew = primary_skew
+        self.median_variance = median_variance
         self.gaussian_generator = gaussian_generator or GaussianGenerator()
     
     def get_partisan_candidates(self, population_group: PopulationGroup, 
@@ -114,7 +116,7 @@ class PartisanCandidateGenerator(CandidateGenerator):
         """Generate all candidates for the population."""
         reps = self.get_partisan_candidates(population.republicans, population, self.n_party_candidates)
         dems = self.get_partisan_candidates(population.democrats, population, self.n_party_candidates)
-        median = self.get_median_candidate(population, self.gaussian_generator)
+        median = self.get_median_candidate(population, self.median_variance, self.gaussian_generator)
         
         return dems + [median] + reps
 
@@ -122,12 +124,18 @@ class PartisanCandidateGenerator(CandidateGenerator):
 class NormalPartisanCandidateGenerator(CandidateGenerator):
     """Generates partisan candidates from normal distributions with a median candidate."""
     
-    def __init__(self, n_partisan_candidates: int, ideology_variance: float, quality_variance: float,
-                 gaussian_generator: Optional[GaussianGenerator] = None):
+    def __init__(self, n_partisan_candidates: int, 
+                ideology_variance: float, 
+                quality_variance: float,
+                primary_skew: float,
+                median_variance: float,
+                gaussian_generator: Optional[GaussianGenerator] = None):
         """Initialize normal partisan candidate generator."""
         super().__init__(quality_variance)
         self.n_partisan_candidates = n_partisan_candidates
         self.ideology_variance = ideology_variance
+        self.primary_skew = primary_skew
+        self.median_variance = median_variance
         self.gaussian_generator = gaussian_generator or GaussianGenerator()
     
     def candidates(self, population: CombinedPopulation) -> List[Candidate]:
@@ -137,7 +145,7 @@ class NormalPartisanCandidateGenerator(CandidateGenerator):
         # Generate Democratic candidates from normal distribution
         for i in range(self.n_partisan_candidates):
             # Draw from normal distribution centered at Democratic mean
-            ideology = population.democrats.mean + self.gaussian_generator() * self.ideology_variance
+            ideology = population.democrats.mean - self.primary_skew + self.gaussian_generator() * self.ideology_variance 
             candidate = Candidate(
                 name=f"D-{i + 1}",
                 tag=DEMOCRATS,
@@ -148,13 +156,13 @@ class NormalPartisanCandidateGenerator(CandidateGenerator):
             candidates.append(candidate)
         
         # Add median candidate
-        median_candidate = self.get_median_candidate(population, self.gaussian_generator)
+        median_candidate = self.get_median_candidate(population, self.median_variance, self.gaussian_generator)
         candidates.append(median_candidate)
         
         # Generate Republican candidates from normal distribution
         for i in range(self.n_partisan_candidates):
             # Draw from normal distribution centered at Republican mean
-            ideology = population.republicans.mean + self.gaussian_generator() * self.ideology_variance
+            ideology = population.republicans.mean + self.primary_skew + self.gaussian_generator() * self.ideology_variance
             candidate = Candidate(
                 name=f"R-{i + 1}",
                 tag=REPUBLICANS,
@@ -164,14 +172,54 @@ class NormalPartisanCandidateGenerator(CandidateGenerator):
             )
             candidates.append(candidate)
         
+        # Adjust for centrist constraints
+        candidates = self.adjust_for_centrist(candidates, population)
+        
         return candidates
 
+    def adjust_for_centrist(self, candidates: List[Candidate], population: CombinedPopulation) -> List[Candidate]:
+        """Adjust candidates so the inside-most partisan candidate in the dominant party 
+        is not more than 20% of the population past the median voter.
+        I.e., not less than the 30th percentile for Democrats and not more than the 70th percentile for Republicans."""
+        
+        # Infer the dominant party from the median candidate
+        median_candidate = next((c for c in candidates if c.name.endswith('-V')), None)
+        if median_candidate is None:
+            return candidates
+        dominant_party = median_candidate.tag
+        
+        # Get percentile boundaries (30th for Democrats, 70th for Republicans)
+        if dominant_party == DEMOCRATS:
+            min_ideology = population.ideology_for_percentile(0.3)  # 30th percentile
+        else:  # REPUBLICANS
+            max_ideology = population.ideology_for_percentile(0.7)  # 70th percentile
+        
+        # Find the inside-most candidate for the dominant party (excluding median candidates)
+        dominant_candidates = [c for c in candidates if c.tag == dominant_party and not c.name.endswith('-V')]
+        if not dominant_candidates:
+            return candidates
+        
+        # Sort by ideology to find the inside-most candidate
+        dominant_candidates.sort(key=lambda c: c.ideology)
+        
+        if dominant_party == DEMOCRATS:
+            # For Democrats, the inside-most candidate is the one with highest ideology (closest to center)
+            inside_most = dominant_candidates[-1]
+            if inside_most.ideology < min_ideology:
+                inside_most.ideology = min_ideology
+        else:  # REPUBLICANS
+            # For Republicans, the inside-most candidate is the one with lowest ideology (closest to center)
+            inside_most = dominant_candidates[0]
+            if inside_most.ideology > max_ideology:
+                inside_most.ideology = max_ideology
+        
+        return candidates
 
 class RankCandidateGenerator(CandidateGenerator):
     """Generates candidates based on rank distribution."""
     
     def __init__(self, n_party_candidates: int, spread: float, offset: float,
-                 ideology_variance: float, quality_variance: float,
+                 ideology_variance: float, quality_variance: float, median_variance: float,
                  gaussian_generator: Optional[GaussianGenerator] = None):
         """Initialize rank candidate generator."""
         super().__init__(quality_variance)
@@ -179,6 +227,7 @@ class RankCandidateGenerator(CandidateGenerator):
         self.spread = spread
         self.offset = offset
         self.ideology_variance = ideology_variance
+        self.median_variance = median_variance
         self.gaussian_generator = gaussian_generator or GaussianGenerator()
     
     def compute_ranks(self, tag: PopulationTag, offset: float, spread: float, 
@@ -216,7 +265,7 @@ class RankCandidateGenerator(CandidateGenerator):
         """Generate all candidates for the population."""
         reps = self.get_candidates_rank(population.republicans, population, self.n_party_candidates)
         dems = self.get_candidates_rank(population.democrats, population, self.n_party_candidates)
-        median = self.get_median_candidate(population, self.gaussian_generator)
+        median = self.get_median_candidate(population, self.median_variance, self.gaussian_generator)
         
         return dems + [median] + reps
 
@@ -224,12 +273,13 @@ class RankCandidateGenerator(CandidateGenerator):
 class RandomCandidateGenerator(CandidateGenerator):
     """Generates random candidates."""
     
-    def __init__(self, n_candidates: int, quality_variance: float, n_median_candidates: int = 0,
+    def __init__(self, n_candidates: int, quality_variance: float, median_variance: float, n_median_candidates: int = 0,
                  gaussian_generator: Optional[GaussianGenerator] = None):
         """Initialize random candidate generator."""
         super().__init__(quality_variance)
         self.n_candidates = n_candidates
         self.n_median_candidates = n_median_candidates
+        self.median_variance = median_variance
         self.gaussian_generator = gaussian_generator or GaussianGenerator()
     
     def candidates(self, population: CombinedPopulation) -> List[Candidate]:
@@ -250,7 +300,7 @@ class RandomCandidateGenerator(CandidateGenerator):
         
         # Add median candidates
         for _ in range(self.n_median_candidates):
-            median_candidate = self.get_median_candidate(population, self.gaussian_generator)
+            median_candidate = self.get_median_candidate(population, self.median_variance, self.gaussian_generator)
             candidates.append(median_candidate)
         
         return candidates
@@ -280,10 +330,10 @@ class CondorcetCandidateGenerator(CandidateGenerator):
             ideology = median_voter_ideology + self.gaussian_generator() * self.ideology_variance
             
             # Determine party affiliation based on ideology
-            if ideology < -self.party_switch_point:  # More liberal
+            if ideology < -self.party_switch_point:  # More very liberal
                 party_tag = DEMOCRATS
                 party_initial = "D"
-            elif ideology > self.party_switch_point:  # More conservative
+            elif ideology > self.party_switch_point:  # More very conservative
                 party_tag = REPUBLICANS
                 party_initial = "R"
             else:  # Centrist
@@ -301,7 +351,7 @@ class CondorcetCandidateGenerator(CandidateGenerator):
         
         # Sort candidates by ideology
         candidates.sort(key=lambda c: c.ideology)
-        # Rename candidates to be their party-letter and then their order from most liberal to most conservative (1-based)
+        # Rename candidates to be their party-letter and then their order from very liberal to very conservative (1-based)
         for idx, candidate in enumerate(candidates):
             candidate.name = f"{candidate.tag.short_name[0]}-{idx + 1}"
 

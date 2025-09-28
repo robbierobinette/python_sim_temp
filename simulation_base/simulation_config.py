@@ -64,47 +64,53 @@ class CongressionalSimulationConfigFactory:
     @staticmethod
     def create_config(params: dict) -> UnitSimulationConfig:
         """Create simulation configuration."""
-        # Extract parameters with defaults
-        candidates = params.get('candidates', 3)
-        gaussian_generator = params.get('gaussian_generator', GaussianGenerator())
-        nvoters = params.get('nvoters', 1000)
-        uncertainty = params.get('uncertainty', 0.0)
-        primary_skew = params.get('primary_skew', 0.25)
-        candidate_generator_type = params.get('candidate_generator_type', 'partisan')
-        # condorcet_variance = params.get('condorcet_variance', 0.5)  # Not used, replaced by ideology_variance
-        election_type = params.get('election_type', 'primary')
-        ideology_variance = params.get('ideology_variance', 0.20)
-        spread = params.get('spread', 0.4)
+        # Extract parameters directly from params (no defaults; will raise KeyError if missing)
+        candidates = params['candidates']
+        gaussian_generator = params['gaussian_generator']
+        nvoters = params['nvoters']
+        uncertainty = params['uncertainty']
+        primary_skew = params['primary_skew']
+        candidate_generator_type = params['candidate_generator_type']
+        election_type = params['election_type']
+        ideology_variance = params['ideology_variance']
+        spread = params['spread']
+        quality_variance = params['quality_variance']
+        condorcet_variance = params['condorcet_variance']
+        partisan_shift = params['partisan_shift']
         
         election_config = ElectionConfig(
             uncertainty=uncertainty,
         )
         
-        population_config = PopulationConfiguration(1, 1, 0.0 / 30)
+        population_config = PopulationConfiguration(1, 1, partisan_shift)
         
         # Create candidate generator based on type
         if candidate_generator_type == "condorcet":
             from .candidate_generator import CondorcetCandidateGenerator
             candidate_generator = CondorcetCandidateGenerator(
                 n_candidates=candidates,  # Total number of candidates for Condorcet
-                ideology_variance=ideology_variance,
-                quality_variance=0.001,
+                ideology_variance=condorcet_variance,
+                quality_variance=quality_variance,
                 gaussian_generator=gaussian_generator
             )
         elif candidate_generator_type == "random":
             from .candidate_generator import RandomCandidateGenerator
             candidate_generator = RandomCandidateGenerator(
                 n_candidates=candidates,  # Total number of candidates for Random
-                quality_variance=0.001,
+                quality_variance=quality_variance,
+                median_variance=condorcet_variance,
                 n_median_candidates=0,  # No median candidates for random
                 gaussian_generator=gaussian_generator
             )
         elif candidate_generator_type == "normal-partisan":
             from .candidate_generator import NormalPartisanCandidateGenerator
+            effective_primary_skew = primary_skew if election_type == "primary" else 0.0
             candidate_generator = NormalPartisanCandidateGenerator(
                 n_partisan_candidates=candidates,  # Number per party for normal-partisan
                 ideology_variance=ideology_variance,
-                quality_variance=0.001,
+                quality_variance=quality_variance,
+                primary_skew=effective_primary_skew,
+                median_variance=condorcet_variance,
                 gaussian_generator=gaussian_generator
             )
         else:  # partisan (default)
@@ -115,7 +121,8 @@ class CongressionalSimulationConfigFactory:
                 n_party_candidates=candidates,  # Number per party for partisan
                 spread=spread, 
                 ideology_variance=ideology_variance, 
-                quality_variance=0.001,
+                median_variance=condorcet_variance,
+                quality_variance=quality_variance,
                 primary_skew=effective_primary_skew,
                 gaussian_generator=gaussian_generator
             )
