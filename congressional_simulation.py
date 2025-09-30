@@ -90,6 +90,7 @@ class CongressionalSimulation:
         self.config = config or CongressionalSimulationConfigFactory.create_config(3)
         self.gaussian_generator = gaussian_generator or GaussianGenerator()
         self.election_type = election_type
+        self.data_file = None  # Will be set when run_simulation is called
         
         if election_type == "primary":
             self.election_process = ElectionWithPrimary(primary_skew=self.config.primary_skew, debug=False)
@@ -309,6 +310,7 @@ class CongressionalSimulation:
     
     def run_simulation(self, csv_file: str) -> CongressionalSimulationResult:
         """Run complete simulation from CSV file."""
+        self.data_file = csv_file  # Store for later use
         districts = self.load_districts(csv_file)
         return self.simulate_all_districts(districts)
     

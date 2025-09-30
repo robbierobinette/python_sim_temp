@@ -1,7 +1,7 @@
 """
 Population tags representing different political parties and groups.
 """
-from typing import Dict, Any
+from typing import Dict
 from dataclasses import dataclass
 
 
@@ -42,10 +42,8 @@ DEMOCRATS = PopulationTag(
     hex_color="#0000ff",
     affinity={
         "Rep": 0.0,
-        "Ind": 0.75,
-        "Dem": 1.5,
-        "Maga": -1.0,
-        "Pro": 1.5
+        "Ind": 0.5,
+        "Dem": 1.0
     }
 )
 
@@ -55,11 +53,9 @@ REPUBLICANS = PopulationTag(
     plural_name="Republicans",
     hex_color="#ff0000",
     affinity={
-        "Rep": 1.5,
-        "Ind": 0.75,
-        "Dem": 0.0,
-        "Maga": 1.5,
-        "Pro": -1.0
+        "Rep": 1.0,
+        "Ind": 0.5,
+        "Dem": 0.0
     }
 )
 
@@ -70,40 +66,12 @@ INDEPENDENTS = PopulationTag(
     hex_color="#ff00ff",
     affinity={
         "Rep": 0.0,
-        "Ind": 0.0,
-        "Dem": 0.0,
-        "Maga": 0.0,
-        "Pro": 0.0
+        "Ind": 0.5,
+        "Dem": 0.0
     }
 )
 
-MAGA = PopulationTag(
-    name="MAGA",
-    short_name="Maga",
-    plural_name="Magas",
-    hex_color="#ff8888",
-    affinity={
-        "Rep": 1.0,
-        "Ind": 0.5,
-        "Dem": 0.0,
-        "Maga": 1.25,
-        "Pro": -1.0
-    }
-)
 
-PROGRESSIVE = PopulationTag(
-    name="Progressive",
-    short_name="Pro",
-    plural_name="Progressives",
-    hex_color="#8888ff",
-    affinity={
-        "Rep": 0.0,
-        "Ind": 0.5,
-        "Dem": 1.0,
-        "Maga": -1.0,
-        "Pro": 1.25
-    }
-)
 
 
 def get_party_by_short_name(short_name: str) -> PopulationTag:
@@ -111,8 +79,6 @@ def get_party_by_short_name(short_name: str) -> PopulationTag:
     party_map = {
         "Rep": REPUBLICANS,
         "Dem": DEMOCRATS,
-        "Ind": INDEPENDENTS,
-        "Maga": MAGA,
-        "Pro": PROGRESSIVE
+        "Ind": INDEPENDENTS
     }
     return party_map.get(short_name, INDEPENDENTS)

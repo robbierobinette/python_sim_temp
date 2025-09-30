@@ -3,7 +3,7 @@ Candidate representation for elections.
 """
 from dataclasses import dataclass
 from typing import Dict, Optional
-from .population_tag import PopulationTag, DEMOCRATS, REPUBLICANS, INDEPENDENTS, MAGA, PROGRESSIVE
+from .population_tag import PopulationTag, DEMOCRATS, REPUBLICANS, INDEPENDENTS
 
 
 @dataclass

@@ -53,7 +53,7 @@ class ElectionWithPrimary:
         self.primary_skew = primary_skew
         self.debug = debug
         self.dem_primary_factions = {DEMOCRATS}  # Could add Progressive, etc.
-        self.rep_primary_factions = {REPUBLICANS}  # Could add MAGA, etc.
+        self.rep_primary_factions = {REPUBLICANS}
     
     @property
     def name(self) -> str:
