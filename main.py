@@ -9,8 +9,7 @@ ranked choice voting (instant runoff) based on the Cook Political Report data.
 import argparse
 import sys
 import os
-from typing import Optional
-from congressional_simulation import CongressionalSimulation, CongressionalSimulationResult
+from congressional_simulation import CongressionalSimulation
 from simulation_base.simulation_config import CongressionalSimulationConfigFactory
 from simulation_base.gaussian_generator import GaussianGenerator, set_seed
 from visualization import create_all_visualizations, plot_winner_ideology_histogram
@@ -122,6 +121,12 @@ def main():
         default=0.0,
         help="Quality variance for candidate generation (default: 0.0)"
     )
+    parser.add_argument(
+        "--adjust-for-centrists", 
+        choices=["dominant", "both", "none"],
+        default="dominant",
+        help="Adjust candidates for centrist constraints: 'dominant' (default), 'both', or 'none'"
+    )
     
     args = parser.parse_args()
     
@@ -149,7 +154,8 @@ def main():
         'ideology_variance': args.ideology_variance,
         'spread': args.spread,
         'quality_variance': args.quality_variance,
-        'partisan_shift': args.partisan_shift
+        'partisan_shift': args.partisan_shift,
+        'adjust_for_centrists': args.adjust_for_centrists
     }
     config = CongressionalSimulationConfigFactory.create_config(config_params)
     
@@ -171,7 +177,7 @@ def main():
         print(f"\nResults saved to {args.output}")
         
         # Print some statistics
-        print(f"\n=== Additional Statistics ===")
+        print("\n=== Additional Statistics ===")
         
         # Party distribution
         dem_districts = [dr for dr in result.district_results if dr.winner_party == "Dem"]

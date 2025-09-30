@@ -77,6 +77,7 @@ class CongressionalSimulationConfigFactory:
         quality_variance = params['quality_variance']
         condorcet_variance = params['condorcet_variance']
         partisan_shift = params['partisan_shift']
+        adjust_for_centrists = params['adjust_for_centrists']
         
         election_config = ElectionConfig(
             uncertainty=uncertainty,
@@ -111,7 +112,8 @@ class CongressionalSimulationConfigFactory:
                 quality_variance=quality_variance,
                 primary_skew=effective_primary_skew,
                 median_variance=condorcet_variance,
-                gaussian_generator=gaussian_generator
+                gaussian_generator=gaussian_generator,
+                adjust_for_centrists=adjust_for_centrists
             )
         else:  # partisan (default)
             from .candidate_generator import PartisanCandidateGenerator
