@@ -7,6 +7,7 @@ from .candidate import Candidate
 from .ballot import RCVBallot
 from .election_result import ElectionResult, CandidateResult
 from .gaussian_generator import GaussianGenerator
+from .election_process import ElectionProcess
 
 
 @dataclass
@@ -268,23 +269,25 @@ class HeadToHeadResult(ElectionResult):
     def __init__(self, tidemans_method: TidemansMethod, voter_satisfaction: float = 0.0):
         """Initialize head-to-head result."""
         self.tidemans_method = tidemans_method
-        self.voter_satisfaction = voter_satisfaction
+        self._voter_satisfaction = voter_satisfaction
     
     @property
     def results(self) -> Dict[Candidate, float]:
         """Get results dictionary."""
         return self.tidemans_method.results
     
-    @property
+    def winner(self) -> Candidate:
+        """Get the winner."""
+        return self.tidemans_method.winner
+    
+    def voter_satisfaction(self) -> float:
+        """Return the voter satisfaction score."""
+        return self._voter_satisfaction
+    
     def ordered_results(self) -> List[CandidateResult]:
         """Get ordered results."""
         return [CandidateResult(candidate=c, votes=v) 
                 for c, v in self.tidemans_method.results.items()]
-    
-    @property
-    def winner(self) -> Candidate:
-        """Get the winner."""
-        return self.tidemans_method.winner
     
     @property
     def n_votes(self) -> float:
@@ -292,7 +295,7 @@ class HeadToHeadResult(ElectionResult):
         return 0.0
 
 
-class HeadToHeadElection:
+class HeadToHeadElection(ElectionProcess):
     """Head-to-head election process using Tideman's method."""
     
     def __init__(self, debug: bool = False):
@@ -304,8 +307,35 @@ class HeadToHeadElection:
         """Name of the election process."""
         return "headToHead"
     
-    def run(self, candidates: List[Candidate], ballots: List[RCVBallot]) -> HeadToHeadResult:
-        """Run head-to-head election."""
+    def run(self, election_def) -> HeadToHeadResult:
+        """Run head-to-head election with the given election definition."""
+        # Generate ballots from population
+        ballots = []
+        for voter in election_def.population.voters:
+            ballot = voter.ballot(election_def.candidates, election_def.config, 
+                                 election_def.gaussian_generator)
+            ballots.append(ballot)
+        
+        # Run the election
+        accumulator = HeadToHeadAccumulator(election_def.candidates)
+        for ballot in ballots:
+            accumulator.add_ballot(ballot)
+        
+        tidemans = TidemansMethod(election_def.candidates, accumulator.results_matrix)
+        result = HeadToHeadResult(tidemans, 0.0)
+        
+        # Calculate voter satisfaction
+        if result.ordered_results():
+            winner = result.winner()
+            left_voter_count = sum(1 for v in election_def.population.voters 
+                                  if v.ideology < winner.ideology)
+            voter_satisfaction = 1 - abs((2.0 * left_voter_count / len(election_def.population.voters)) - 1)
+            result._voter_satisfaction = voter_satisfaction
+        
+        return result
+    
+    def run_with_ballots(self, candidates: List[Candidate], ballots: List[RCVBallot]) -> HeadToHeadResult:
+        """Run head-to-head election (legacy method)."""
         accumulator = HeadToHeadAccumulator(candidates)
         
         for ballot in ballots:
@@ -316,14 +346,14 @@ class HeadToHeadElection:
     
     def run_with_voters(self, voters: List, candidates: List[Candidate], 
                        ballots: List[RCVBallot]) -> HeadToHeadResult:
-        """Run head-to-head election and calculate voter satisfaction."""
-        result = self.run(candidates, ballots)
+        """Run head-to-head election and calculate voter satisfaction (legacy method)."""
+        result = self.run_with_ballots(candidates, ballots)
         
         # Calculate voter satisfaction
-        if result.ordered_results:
-            winner = result.winner
+        if result.ordered_results():
+            winner = result.winner()
             left_voter_count = sum(1 for v in voters if v.ideology < winner.ideology)
             voter_satisfaction = 1 - abs((2.0 * left_voter_count / len(voters)) - 1)
-            result.voter_satisfaction = voter_satisfaction
+            result._voter_satisfaction = voter_satisfaction
         
         return result

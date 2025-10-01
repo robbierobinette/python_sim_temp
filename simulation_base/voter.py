@@ -7,6 +7,7 @@ from .population_group import PopulationGroup
 from .candidate import Candidate
 from .election_config import ElectionConfig
 from .gaussian_generator import GaussianGenerator
+from .ballot import RCVBallot
 
 
 @dataclass
@@ -17,7 +18,7 @@ class Voter:
     
     def distance_score(self, candidate: Candidate) -> float:
         """Calculate distance-based score for a candidate."""
-        return 200.0 - abs(self.ideology - candidate.ideology)
+        return  - abs(self.ideology - candidate.ideology)
     
     def uncertainty(self, config: ElectionConfig, 
                    gaussian_generator: Optional[GaussianGenerator] = None) -> float:

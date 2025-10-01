@@ -13,6 +13,7 @@ from simulation_base.election_with_primary import ElectionWithPrimary, ElectionW
 from simulation_base.head_to_head_election import HeadToHeadElection
 from simulation_base.gaussian_generator import GaussianGenerator
 from simulation_base.election_result import ElectionResult
+from simulation_base.election_process import ElectionProcess
 
 
 @dataclass
@@ -92,6 +93,7 @@ class CongressionalSimulation:
         self.election_type = election_type
         self.data_file = None  # Will be set when run_simulation is called
         
+        self.election_process: ElectionProcess
         if election_type == "primary":
             self.election_process = ElectionWithPrimary(primary_skew=self.config.primary_skew, debug=False)
         elif election_type == "condorcet":
@@ -179,8 +181,8 @@ class CongressionalSimulation:
             )
         
         # Extract winner information
-        winner = result.winner
-        ordered_results = result.ordered_results
+        winner = result.winner()
+        ordered_results = result.ordered_results()
         
         # Calculate margin
         margin = 0.0
@@ -234,14 +236,14 @@ class CongressionalSimulation:
                                         result: ElectionWithPrimaryResult) -> None:
         """Check if median candidates won in primaries and print detailed info."""
         # Check Democratic primary
-        dem_winner = result.democratic_primary.winner
+        dem_winner = result.democratic_primary.winner()
         if dem_winner.name == 'D-V':
             self._print_median_candidate_primary_details(
                 district, election_def, result.democratic_primary, "Democratic"
             )
         
         # Check Republican primary
-        rep_winner = result.republican_primary.winner
+        rep_winner = result.republican_primary.winner()
         if rep_winner.name == 'R-V':
             self._print_median_candidate_primary_details(
                 district, election_def, result.republican_primary, "Republican"

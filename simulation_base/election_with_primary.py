@@ -15,29 +15,30 @@ from .instant_runoff_election import InstantRunoffElection
 from .voter import Voter
 from .election_result import CandidateResult
 from .ballot import RCVBallot
+from .election_process import ElectionProcess
 
 
-@dataclass
-class ElectionWithPrimaryResult:
+class ElectionWithPrimaryResult(ElectionResult):
     """Result of an election with primaries."""
-    democratic_primary: ElectionResult
-    republican_primary: ElectionResult
-    general_election: ElectionResult
     
-    @property
+    def __init__(self, democratic_primary: ElectionResult, republican_primary: ElectionResult, 
+                 general_election: ElectionResult):
+        """Initialize election with primary result."""
+        self.democratic_primary = democratic_primary
+        self.republican_primary = republican_primary
+        self.general_election = general_election
+    
     def winner(self) -> Candidate:
         """Winner of the general election."""
-        return self.general_election.winner
+        return self.general_election.winner()
     
-    @property
-    def ordered_results(self) -> List[CandidateResult]:
-        """Ordered results of the general election."""
-        return self.general_election.ordered_results
-    
-    @property
     def voter_satisfaction(self) -> float:
         """Voter satisfaction from general election."""
-        return self.general_election.voter_satisfaction
+        return self.general_election.voter_satisfaction()
+    
+    def ordered_results(self) -> List[CandidateResult]:
+        """Ordered results of the general election."""
+        return self.general_election.ordered_results()
     
     @property
     def n_votes(self) -> float:
@@ -45,7 +46,7 @@ class ElectionWithPrimaryResult:
         return self.general_election.n_votes
 
 
-class ElectionWithPrimary:
+class ElectionWithPrimary(ElectionProcess):
     """Election process with separate Democratic and Republican primaries."""
     
     def __init__(self, primary_skew: float = 0.5, debug: bool = False):
@@ -89,8 +90,8 @@ class ElectionWithPrimary:
         )
         
         # Get primary winners
-        dem_winner = dem_primary_result.ordered_results[0].candidate
-        rep_winner = rep_primary_result.ordered_results[0].candidate
+        dem_winner = dem_primary_result.ordered_results()[0].candidate
+        rep_winner = rep_primary_result.ordered_results()[0].candidate
         
         # Find other candidates (independents, etc.)
         primary_candidates = set(dem_candidates + rep_candidates)
@@ -104,7 +105,7 @@ class ElectionWithPrimary:
             election_def.config, election_def.gaussian_generator
         )
         
-        if self.debug or dem_primary_result.winner.name == 'D-V' or rep_primary_result.winner.name == 'R-V':
+        if self.debug:
             self._print_debug_results(election_def, 
                 dem_primary_result, 
                 rep_primary_result, 
@@ -140,7 +141,7 @@ class ElectionWithPrimary:
         
         # Use simple plurality for primaries
         primary_process = SimplePlurality()
-        return primary_process.run(candidates, ballots)
+        return primary_process.run_with_ballots(candidates, ballots)
     
     def _run_general(self, candidates: List[Candidate], voters: List,
                     config: ElectionConfig, gaussian_generator: GaussianGenerator) -> ElectionResult:
@@ -169,11 +170,11 @@ class ElectionWithPrimary:
 
 
         print("Democratic Primary:")
-        for cr in dem_result.ordered_results:
+        for cr in dem_result.ordered_results():
             print(f"{cr.candidate.name:12s} {cr.candidate.ideology:5.2f} {cr.votes:8.0f}")
         
         print("Republican Primary:")
-        for cr in rep_result.ordered_results:
+        for cr in rep_result.ordered_results():
             print(f"{cr.candidate.name:12s} {cr.candidate.ideology:5.2f} {cr.candidate.quality:5.2f} {cr.votes:8.0f}")
         
         # If the winner of the Democratic primary is D-V, print the ideology of every voter that voted for them.
@@ -197,6 +198,6 @@ class ElectionWithPrimary:
         #             print(f"{voter.ideology:.4f}")
         
         print("General Election:")
-        for cr in general_result.ordered_results:
+        for cr in general_result.ordered_results():
             print(f"{cr.candidate.name:12s} {cr.candidate.ideology:5.2f} {cr.candidate.quality:5.2f} {cr.votes:8.0f}")
 

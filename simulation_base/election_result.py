@@ -1,6 +1,7 @@
 """
 Election result representation.
 """
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Dict, List
 from .candidate import Candidate
@@ -13,32 +14,20 @@ class CandidateResult:
     votes: float
 
 
-class ElectionResult:
-    """Base class for election results."""
+class ElectionResult(ABC):
+    """Abstract base class for election results."""
     
-    def __init__(self, results: Dict[Candidate, float], voter_satisfaction: float = 0.0):
-        """Initialize election result."""
-        self.results = results
-        self.voter_satisfaction = voter_satisfaction
-    
-    @property
-    def n_votes(self) -> float:
-        """Total number of votes cast."""
-        return sum(self.results.values())
-    
-    @property
-    def ordered_results(self) -> List[CandidateResult]:
-        """Results ordered by vote count (descending)."""
-        return sorted([CandidateResult(candidate=c, votes=v) 
-                      for c, v in self.results.items()],
-                     key=lambda x: x.votes, reverse=True)
-    
-    @property
+    @abstractmethod
     def winner(self) -> Candidate:
-        """The winning candidate."""
-        return self.ordered_results[0].candidate
+        """Return the winning candidate."""
+        pass
     
-    @property
-    def candidates(self) -> List[Candidate]:
-        """All candidates in the election."""
-        return list(self.results.keys())
+    @abstractmethod
+    def voter_satisfaction(self) -> float:
+        """Return the voter satisfaction score."""
+        pass
+    
+    @abstractmethod
+    def ordered_results(self) -> List[CandidateResult]:
+        """Return results ordered by vote count (descending)."""
+        pass

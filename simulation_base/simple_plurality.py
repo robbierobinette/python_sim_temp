@@ -1,10 +1,33 @@
 """
 Simple plurality voting implementation for primaries.
 """
-from typing import List
+from typing import List, Dict
 from .election_result import ElectionResult, CandidateResult
 from .ballot import RCVBallot
 from .candidate import Candidate
+
+
+class SimplePluralityResult(ElectionResult):
+    """Result of a simple plurality election."""
+    
+    def __init__(self, results: Dict[Candidate, float], voter_satisfaction: float = 0.0):
+        """Initialize simple plurality result."""
+        self._results = results
+        self._voter_satisfaction = voter_satisfaction
+    
+    def winner(self) -> Candidate:
+        """Return the winning candidate."""
+        return self.ordered_results()[0].candidate
+    
+    def voter_satisfaction(self) -> float:
+        """Return the voter satisfaction score."""
+        return self._voter_satisfaction
+    
+    def ordered_results(self) -> List[CandidateResult]:
+        """Return results ordered by vote count (descending)."""
+        return sorted([CandidateResult(candidate=c, votes=v) 
+                      for c, v in self._results.items()],
+                     key=lambda x: x.votes, reverse=True)
 
 
 class SimplePlurality:
@@ -15,8 +38,8 @@ class SimplePlurality:
         """Name of the election process."""
         return "simplePlurality"
     
-    def run(self, candidates: List[Candidate], ballots: List[RCVBallot]) -> ElectionResult:
-        """Run simple plurality election."""
+    def run_with_ballots(self, candidates: List[Candidate], ballots: List[RCVBallot]) -> SimplePluralityResult:
+        """Run simple plurality election with given ballots."""
         # Count first-choice votes
         results = {}
         for ballot in ballots:
@@ -30,4 +53,4 @@ class SimplePlurality:
             if candidate not in results:
                 results[candidate] = 0.0
         
-        return ElectionResult(results, 0.0)
+        return SimplePluralityResult(results, 0.0)
