@@ -171,11 +171,11 @@ class ElectionWithPrimary(ElectionProcess):
 
         print("Democratic Primary:")
         for cr in dem_result.ordered_results():
-            print(f"{cr.candidate.name:12s} {cr.candidate.ideology:5.2f} {cr.votes:8.0f}")
+            print(f"{cr.candidate.name:12s} {cr.candidate.ideology:5.2f} {cr.candidate.quality:5.2f} {cr.votes:8.0f} {cr.candidate.affinity_string()}")
         
         print("Republican Primary:")
         for cr in rep_result.ordered_results():
-            print(f"{cr.candidate.name:12s} {cr.candidate.ideology:5.2f} {cr.candidate.quality:5.2f} {cr.votes:8.0f}")
+            print(f"{cr.candidate.name:12s} {cr.candidate.ideology:5.2f} {cr.candidate.quality:5.2f} {cr.votes:8.0f} {cr.candidate.affinity_string()}")
         
         # If the winner of the Democratic primary is D-V, print the ideology of every voter that voted for them.
         # dem_primary_winner = dem_result.ordered_results[0].candidate

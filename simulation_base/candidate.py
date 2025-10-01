@@ -28,3 +28,7 @@ class Candidate:
         affinity_tuple = tuple(sorted(self.affinity.items())) if self.affinity else ()
         return hash((self.name, self.tag, self.ideology, self.quality, 
                     self.incumbent, affinity_tuple))
+    
+    def affinity_string(self) -> str:
+        """Return a string representation of the candidate's affinity."""
+        return ", ".join([f"{k:5s}: {v: 6.2f}" for k, v in self.affinity.items()])

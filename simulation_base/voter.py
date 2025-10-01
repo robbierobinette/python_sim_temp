@@ -35,7 +35,7 @@ class Voter:
             gaussian_generator = GaussianGenerator()
         
         return (self.distance_score(candidate) +
-                candidate.affinity.get(self.party.tag, 0.0) +
+                candidate.affinity.get(self.party.tag.short_name, 0.0) +
                 self.uncertainty(config, gaussian_generator) +
                 candidate.quality)
     

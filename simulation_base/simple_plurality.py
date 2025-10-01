@@ -46,7 +46,7 @@ class SimplePlurality:
             # Get first choice candidate
             first_choice = ballot.candidate(set(candidates))
             if first_choice:
-                results[first_choice] = results.get(first_choice, 0.0) + ballot.weight
+                results[first_choice] = results.get(first_choice, 0.0) + 1.0
         
         # Ensure all candidates are in results (with 0 votes if needed)
         for candidate in candidates:

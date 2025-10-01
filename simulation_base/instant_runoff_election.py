@@ -157,7 +157,7 @@ class InstantRunoffElection(ElectionProcess):
         for ballot in ballots:
             candidate = ballot.candidate(active_candidates)
             if candidate:
-                results[candidate] = results.get(candidate, 0.0) + ballot.weight
+                results[candidate] = results.get(candidate, 0.0) + 1.0
         
         return RCVRoundResult(candidates, results)
     
@@ -166,11 +166,11 @@ class InstantRunoffElection(ElectionProcess):
                        active_candidates: Set[Candidate],
                        candidates: List[Candidate]) -> List[RCVRoundResult]:
         """Compute all rounds of IRV."""
-        n_weighted_ballots = sum(ballot.weight for ballot in ballots)
+        n_ballots = len(ballots)
         round_result = self._compute_round_result(ballots, active_candidates, candidates)
         
         # Check if we have a majority winner
-        if round_result.ordered_results() and round_result.ordered_results()[0].votes / n_weighted_ballots >= 0.5:
+        if round_result.ordered_results() and round_result.ordered_results()[0].votes / n_ballots >= 0.5:
             return prior_rounds + [round_result]
         else:
             # Eliminate last place candidate

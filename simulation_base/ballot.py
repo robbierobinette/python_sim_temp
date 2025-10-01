@@ -18,7 +18,6 @@ class CandidateScore:
 class RCVBallot:
     """Ranked Choice Voting ballot."""
     unsorted_candidates: List[CandidateScore]
-    weight: float = 1.0
     gaussian_generator: Optional[GaussianGenerator] = None
     
     def __post_init__(self):
