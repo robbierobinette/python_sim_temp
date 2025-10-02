@@ -28,6 +28,11 @@ class SimplePluralityResult(ElectionResult):
         return sorted([CandidateResult(candidate=c, votes=v) 
                       for c, v in self._results.items()],
                      key=lambda x: x.votes, reverse=True)
+    
+    @property
+    def n_votes(self) -> float:
+        """Total votes in the election."""
+        return sum(self._results.values())
 
 
 class SimplePlurality:

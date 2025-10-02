@@ -267,14 +267,14 @@ class CongressionalSimulation:
         
         # Print all candidates in this primary with their ideology and vote counts
         print(f"\n{party} Primary Candidates:")
-        for candidate_result in primary_result.ordered_results:
+        for candidate_result in primary_result.ordered_results():
             candidate = candidate_result.candidate
-            winner_marker = " ← WINNER" if candidate_result == primary_result.ordered_results[0] else ""
+            winner_marker = " ← WINNER" if candidate_result == primary_result.ordered_results()[0] else ""
             print(f"  {candidate.name:4s} ({candidate.tag.short_name:3s}): "
                   f"Ideology={candidate.ideology:6.2f}, Votes={candidate_result.votes:6.1f}{winner_marker}")
         
         print(f"Total Primary Votes: {primary_result.n_votes:.1f}")
-        print(f"Primary Voter Satisfaction: {primary_result.voter_satisfaction:.3f}")
+        print(f"Primary Voter Satisfaction: {primary_result.voter_satisfaction():.3f}")
         print("=" * 50)
     
     def simulate_all_districts(self, districts: List[DistrictVotingRecord]) -> CongressionalSimulationResult:

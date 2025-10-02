@@ -7,7 +7,7 @@ for variance in .15 .20 .25 .30 ; do
 		uncertainty=0.5
 		voters=1000
 
-		odir="out/xx-variance-$variance""
+		odir="out/xx-variance-$variance"
 		mkdir -p $odir
 
 		echo "skew $skew variance $variance candidates $candidates uncertainty $uncertainty voters $voters" > $odir/parameters
