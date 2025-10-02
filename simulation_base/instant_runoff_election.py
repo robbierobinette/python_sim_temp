@@ -82,6 +82,15 @@ class RCVResult(ElectionResult):
         else:
             return []
     
+    @property
+    def n_votes(self) -> float:
+        """Total votes in the election."""
+        if self.rounds:
+            # Sum up all votes from the first round (before any eliminations)
+            return sum(result.votes for result in self.rounds[0].ordered_results())
+        else:
+            return 0.0
+    
     def print_detailed_results(self) -> None:
         """Print detailed results for all rounds."""
         for i, round_result in enumerate(self.rounds):

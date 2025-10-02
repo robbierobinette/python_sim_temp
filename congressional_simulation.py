@@ -199,7 +199,7 @@ class CongressionalSimulation:
             winner_name=winner.name,
             winner_party=winner.tag.short_name,
             winner_ideology=winner.ideology,
-            voter_satisfaction=result.voter_satisfaction,
+            voter_satisfaction=result.voter_satisfaction(),
             total_votes=result.n_votes,
             margin=margin
         )

@@ -1,16 +1,16 @@
 #!/bin/bash
 
-for adjust in none dominant both ; do 
+for variance in .15 .20 .25 .30 ; do
 	for e in primary irv condorcet ; do
 		skew=0.25
-		variance=0.15
-		candidates=2	
+		candidates=3	
 		uncertainty=0.5
-		voters=10000
+		voters=1000
 
-		odir="out/$voters-$skew-$variance-$candidates-$uncertainty-$adjust"
+		odir="out/xx-variance-$variance""
 		mkdir -p $odir
 
+		echo "skew $skew variance $variance candidates $candidates uncertainty $uncertainty voters $voters" > $odir/parameters
 		python main.py \
 			--candidate-generator normal-partisan  \
 			--election-type $e \
@@ -18,7 +18,6 @@ for adjust in none dominant both ; do
 			--seed 42  \
 			--nvoters $voters  \
 			--uncertainty $uncertainty  \
-			--adjust-for-centrist $adjust \
 			--ideology-variance $variance  \
 			--condorcet-variance .01 \
 			--candidates $candidates  \
