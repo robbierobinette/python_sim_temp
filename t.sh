@@ -2,12 +2,12 @@
 
 for variance in .15 .20 .25 .30 ; do
 	for e in primary irv condorcet ; do
-		skew=0.25
-		candidates=3	
+		skew=0.0
+		candidates=2	
 		uncertainty=0.5
 		voters=1000
 
-		odir="out/xx-variance-$variance"
+		odir="out/xx3-variance-$variance"
 		mkdir -p $odir
 
 		echo "skew $skew variance $variance candidates $candidates uncertainty $uncertainty voters $voters" > $odir/parameters
