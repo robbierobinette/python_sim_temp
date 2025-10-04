@@ -4,6 +4,7 @@ Simulation configuration for congressional elections.
 from dataclasses import dataclass
 from typing import Optional
 from .election_config import ElectionConfig
+from .district_voting_record import DistrictVotingRecord
 from .candidate_generator import CandidateGenerator
 from .gaussian_generator import GaussianGenerator
 
@@ -40,7 +41,7 @@ class CongressionalSimulationConfig:
 class UnitSimulationConfig(CongressionalSimulationConfig):
     """Unit simulation configuration."""
     
-    def generate_definition(self, dvr, gaussian_generator: Optional[GaussianGenerator] = None):
+    def generate_definition(self, dvr: DistrictVotingRecord, gaussian_generator: Optional[GaussianGenerator] = None):
         """Generate election definition for a district."""
         from .unit_population import UnitPopulation
         from .election_definition import ElectionDefinition
@@ -55,7 +56,7 @@ class UnitSimulationConfig(CongressionalSimulationConfig):
         candidates = self.candidate_generator.candidates(district_pop)
         candidates.sort(key=lambda c: c.ideology)
         
-        return ElectionDefinition(candidates, district_pop, self.config, gaussian_generator)
+        return ElectionDefinition(candidates, district_pop, self.config, gaussian_generator, dvr.state)
 
 
 class CongressionalSimulationConfigFactory:

@@ -77,7 +77,8 @@ class ToxicityAnalyzer:
                     candidates=modified_candidates,
                     population=election_def.population,
                     config=election_def.config,
-                    gaussian_generator=election_def.gaussian_generator
+                    gaussian_generator=election_def.gaussian_generator,
+                    state=election_def.state
                 )
                 
                 # Run election with toxic candidate
@@ -102,7 +103,8 @@ class ToxicityAnalyzer:
             candidates=toxic_candidates,
             population=election_def.population,
             config=election_def.config,
-            gaussian_generator=election_def.gaussian_generator
+            gaussian_generator=election_def.gaussian_generator,
+            state=election_def.state
         )
 
         
@@ -125,7 +127,8 @@ class ToxicityAnalyzer:
                     candidates=modified_candidates,
                     population=election_def.population,
                     config=election_def.config,
-                    gaussian_generator=election_def.gaussian_generator
+                    gaussian_generator=election_def.gaussian_generator,
+                    state=election_def.state
                 )
                 
                 # Run election with non-toxic candidate
@@ -171,7 +174,8 @@ class ToxicityAnalyzer:
             candidates=new_candidates,
             population=election_def.population,
             config=election_def.config,
-            gaussian_generator=election_def.gaussian_generator
+            gaussian_generator=election_def.gaussian_generator,
+            state=election_def.state
         )
         
         new_result = self._run_election(new_election_def, election_process, gaussian_generator)
@@ -206,7 +210,8 @@ class ToxicityAnalyzer:
                 candidates=third_candidates,
                 population=election_def.population,
                 config=election_def.config,
-                gaussian_generator=election_def.gaussian_generator
+                gaussian_generator=election_def.gaussian_generator,
+                state=election_def.state
             )
             
             third_result = self._run_election(third_election_def, election_process, gaussian_generator)

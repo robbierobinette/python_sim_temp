@@ -16,3 +16,4 @@ class ElectionDefinition:
     population: CombinedPopulation
     config: ElectionConfig
     gaussian_generator: GaussianGenerator
+    state: str

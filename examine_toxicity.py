@@ -28,7 +28,8 @@ def run_election(candidates: List[Candidate],
         candidates=candidates,
         population=population,
         config=config,
-        gaussian_generator=gaussian_generator
+        gaussian_generator=gaussian_generator,
+        state="TX"  # Default state for toxicity analysis
     )
 
     if False:
