@@ -422,7 +422,6 @@ class TestCandidateGeneratorIntegration:
             quality_variance=0.2,
             primary_skew=0.25,
             median_variance=0.1,
-            adjust_for_centrists="none"
         )
         
         # Generate candidates

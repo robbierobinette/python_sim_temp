@@ -256,7 +256,6 @@ class TestNormalPartisanCandidateGenerator:
             quality_variance=0.2,
             primary_skew=0.25,
             median_variance=0.1,
-            adjust_for_centrists="dominant"
         )
         
         assert generator.n_partisan_candidates == 2
@@ -274,7 +273,6 @@ class TestNormalPartisanCandidateGenerator:
             quality_variance=0.0,
             primary_skew=0.0,
             median_variance=0.0,
-            adjust_for_centrists="none"
         )
         
         groups = [
@@ -307,7 +305,6 @@ class TestNormalPartisanCandidateGenerator:
             quality_variance=0.0,
             primary_skew=0.0,
             median_variance=0.0,
-            adjust_for_centrists="dominant"
         )
         
         groups = [
@@ -330,7 +327,6 @@ class TestNormalPartisanCandidateGenerator:
             quality_variance=0.0,
             primary_skew=0.0,
             median_variance=0.0,
-            adjust_for_centrists="both"
         )
         
         groups = [
@@ -353,7 +349,6 @@ class TestNormalPartisanCandidateGenerator:
             quality_variance=0.0,
             primary_skew=0.0,
             median_variance=0.0,
-            adjust_for_centrists="none"
         )
         
         groups = [

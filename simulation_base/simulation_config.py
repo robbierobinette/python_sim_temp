@@ -15,6 +15,7 @@ class PopulationConfiguration:
     partisanship: float
     stddev: float
     population_skew: float
+    seed: Optional[int] = None
 
 
 class CongressionalSimulationConfig:
@@ -51,7 +52,7 @@ class UnitSimulationConfig(CongressionalSimulationConfig):
         
         district_pop = UnitPopulation.create_with_params(
             dvr, self.pop_config.partisanship, self.pop_config.stddev, 
-            self.pop_config.population_skew, self.nvoters)
+            self.pop_config.population_skew, self.nvoters, self.pop_config.seed)
         
         candidates = self.candidate_generator.candidates(district_pop)
         candidates.sort(key=lambda c: c.ideology)
@@ -78,13 +79,12 @@ class CongressionalSimulationConfigFactory:
         quality_variance = params['quality_variance']
         condorcet_variance = params['condorcet_variance']
         partisan_shift = params['partisan_shift']
-        adjust_for_centrists = params['adjust_for_centrists']
         
         election_config = ElectionConfig(
             uncertainty=uncertainty,
         )
         
-        population_config = PopulationConfiguration(1, 1, partisan_shift)
+        population_config = PopulationConfiguration(1, 1, partisan_shift, params.get('seed'))
         
         # Create candidate generator based on type
         if candidate_generator_type == "condorcet":
@@ -114,7 +114,6 @@ class CongressionalSimulationConfigFactory:
                 primary_skew=effective_primary_skew,
                 median_variance=condorcet_variance,
                 gaussian_generator=gaussian_generator,
-                adjust_for_centrists=adjust_for_centrists
             )
         else:  # partisan (default)
             from .candidate_generator import PartisanCandidateGenerator

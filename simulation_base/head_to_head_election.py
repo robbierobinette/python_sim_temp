@@ -16,11 +16,7 @@ class PairwiseOutcome:
     candidate_b: Candidate
     votes_for_a: float
     votes_for_b: float
-    
-    @property
-    def winner(self) -> Candidate:
-        """Return the winner of this matchup."""
-        return self.candidate_a if self.votes_for_a > self.votes_for_b else self.candidate_b
+    winner: Candidate  # Store the actual winner (determined randomly for ties)
     
     @property
     def margin(self) -> float:
@@ -34,10 +30,11 @@ class PairwiseOutcome:
 class HeadToHeadAccumulator:
     """Accumulates head-to-head results from ballots."""
     
-    def __init__(self, candidates: List[Candidate], ballots: List[RCVBallot]):
+    def __init__(self, candidates: List[Candidate], ballots: List[RCVBallot], gaussian_generator=None):
         """Initialize accumulator and compute all head-to-head matchups."""
         self.candidates = candidates
         self.pairwise_outcomes: List[PairwiseOutcome] = []
+        self.gaussian_generator = gaussian_generator
         
         # Compute all head-to-head matchups
         # Only compute A vs B (not B vs A) for each unique pair
@@ -68,8 +65,21 @@ class HeadToHeadAccumulator:
                     elif pos_a > pos_b:
                         votes_for_b += 1.0
                 
+                # Determine winner (randomly for ties)
+                if votes_for_a > votes_for_b:
+                    winner = candidate_a
+                elif votes_for_b > votes_for_a:
+                    winner = candidate_b
+                else:
+                    # Tie - randomly choose winner
+                    if self.gaussian_generator:
+                        winner = candidate_a if self.gaussian_generator.next_boolean() else candidate_b
+                    else:
+                        # Fallback to alphabetical order if no generator provided
+                        winner = candidate_a if candidate_a.name < candidate_b.name else candidate_b
+                
                 # Store outcome
-                outcome = PairwiseOutcome(candidate_a, candidate_b, votes_for_a, votes_for_b)
+                outcome = PairwiseOutcome(candidate_a, candidate_b, votes_for_a, votes_for_b, winner)
                 self.pairwise_outcomes.append(outcome)
 
 
@@ -109,8 +119,8 @@ def determine_winner_from_pairwise_outcomes(pairwise_outcomes: List[PairwiseOutc
     
     # Process each pairwise outcome
     for outcome in pairwise_outcomes:
-        if outcome.votes_for_a > outcome.votes_for_b:
-            # A wins
+        if outcome.winner == outcome.candidate_a:
+            # A wins (including random tiebreaker)
             stats_dict[outcome.candidate_a.name].wins += 1
             stats_dict[outcome.candidate_b.name].losses += 1
             loss_margin = outcome.votes_for_a - outcome.votes_for_b
@@ -118,8 +128,8 @@ def determine_winner_from_pairwise_outcomes(pairwise_outcomes: List[PairwiseOutc
                 stats_dict[outcome.candidate_b.name].smallest_loss_margin,
                 loss_margin
             )
-        elif outcome.votes_for_b > outcome.votes_for_a:
-            # B wins
+        elif outcome.winner == outcome.candidate_b:
+            # B wins (including random tiebreaker)
             stats_dict[outcome.candidate_b.name].wins += 1
             stats_dict[outcome.candidate_a.name].losses += 1
             loss_margin = outcome.votes_for_b - outcome.votes_for_a
@@ -128,7 +138,7 @@ def determine_winner_from_pairwise_outcomes(pairwise_outcomes: List[PairwiseOutc
                 loss_margin
             )
         else:
-            # Tie
+            # This shouldn't happen with the new design, but keeping for safety
             stats_dict[outcome.candidate_a.name].ties += 1
             stats_dict[outcome.candidate_b.name].ties += 1
     
@@ -173,14 +183,16 @@ class HeadToHeadResult(ElectionResult):
         
         # Process outcomes
         for outcome in self.pairwise_outcomes:
-            if outcome.votes_for_a > outcome.votes_for_b:
+            if outcome.winner == outcome.candidate_a:
+                # A wins (including random tiebreaker)
                 stats_dict[outcome.candidate_a.name].wins += 1
                 stats_dict[outcome.candidate_b.name].losses += 1
                 loss_margin = outcome.votes_for_a - outcome.votes_for_b
                 stats_dict[outcome.candidate_b.name].smallest_loss_margin = min(
                     stats_dict[outcome.candidate_b.name].smallest_loss_margin, loss_margin
                 )
-            elif outcome.votes_for_b > outcome.votes_for_a:
+            elif outcome.winner == outcome.candidate_b:
+                # B wins (including random tiebreaker)
                 stats_dict[outcome.candidate_b.name].wins += 1
                 stats_dict[outcome.candidate_a.name].losses += 1
                 loss_margin = outcome.votes_for_b - outcome.votes_for_a
@@ -188,6 +200,7 @@ class HeadToHeadResult(ElectionResult):
                     stats_dict[outcome.candidate_a.name].smallest_loss_margin, loss_margin
                 )
             else:
+                # This shouldn't happen with the new design, but keeping for safety
                 stats_dict[outcome.candidate_a.name].ties += 1
                 stats_dict[outcome.candidate_b.name].ties += 1
         
@@ -205,13 +218,9 @@ class HeadToHeadResult(ElectionResult):
         """Print all pairwise outcomes for this election."""
         print("\n  Pairwise Outcomes:")
         for outcome in self.pairwise_outcomes:
-            winner_marker = ""
-            if outcome.votes_for_a > outcome.votes_for_b:
-                winner_marker = f" (Winner: {outcome.candidate_a.name})"
-            elif outcome.votes_for_b > outcome.votes_for_a:
-                winner_marker = f" (Winner: {outcome.candidate_b.name})"
-            else:
-                winner_marker = " (Tie)"
+            winner_marker = f" (Winner: {outcome.winner.name})"
+            if outcome.votes_for_a == outcome.votes_for_b:
+                winner_marker += " [Random tiebreaker]"
             
             print(f"    {outcome.candidate_a.name} vs {outcome.candidate_b.name}: "
                   f"{outcome.votes_for_a:.0f} - {outcome.votes_for_b:.0f}{winner_marker}")
@@ -239,7 +248,7 @@ class HeadToHeadElection(ElectionProcess):
             ballots.append(ballot)
         
         # Run the election (accumulator computes all matchups during initialization)
-        accumulator = HeadToHeadAccumulator(election_def.candidates, ballots)
+        accumulator = HeadToHeadAccumulator(election_def.candidates, ballots, election_def.gaussian_generator)
         
         # Calculate voter satisfaction
         winner = determine_winner_from_pairwise_outcomes(accumulator.pairwise_outcomes, 
@@ -253,15 +262,15 @@ class HeadToHeadElection(ElectionProcess):
         
         return result
     
-    def run_with_ballots(self, candidates: List[Candidate], ballots: List[RCVBallot]) -> HeadToHeadResult:
+    def run_with_ballots(self, candidates: List[Candidate], ballots: List[RCVBallot], gaussian_generator=None) -> HeadToHeadResult:
         """Run head-to-head election (legacy method)."""
-        accumulator = HeadToHeadAccumulator(candidates, ballots)
+        accumulator = HeadToHeadAccumulator(candidates, ballots, gaussian_generator)
         return HeadToHeadResult(accumulator.pairwise_outcomes, candidates, 0.0)
     
     def run_with_voters(self, voters: List, candidates: List[Candidate], 
-                       ballots: List[RCVBallot]) -> HeadToHeadResult:
+                       ballots: List[RCVBallot], gaussian_generator=None) -> HeadToHeadResult:
         """Run head-to-head election and calculate voter satisfaction (legacy method)."""
-        accumulator = HeadToHeadAccumulator(candidates, ballots)
+        accumulator = HeadToHeadAccumulator(candidates, ballots, gaussian_generator)
         
         # Calculate voter satisfaction
         winner = determine_winner_from_pairwise_outcomes(accumulator.pairwise_outcomes, candidates)

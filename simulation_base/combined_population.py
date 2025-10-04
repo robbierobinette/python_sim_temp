@@ -15,6 +15,7 @@ class CombinedPopulation:
     """Combined population of multiple voter groups."""
     populations: List[PopulationGroup]
     desired_samples: int = 1000
+    seed: Optional[int] = None
     
     def __post_init__(self):
         """Initialize population after creation."""
@@ -22,6 +23,8 @@ class CombinedPopulation:
             p.tag: p for p in self.populations
         }
         self.summed_weight: float = sum(p.weight for p in self.populations)
+        # Initialize private GaussianGenerator with seed
+        self._gaussian_generator = GaussianGenerator(self.seed)
         self.sample_population: List[Voter] = self._population_sample(self.desired_samples)
         self.sample_population.sort(key=lambda v: v.ideology)
         self.median_voter: float = self.sample_population[len(self.sample_population) // 2].ideology
@@ -36,11 +39,8 @@ class CombinedPopulation:
         """Get all voters in the population."""
         return self.sample_population
     
-    def dominant_party(self, gaussian_generator: Optional[GaussianGenerator] = None) -> PopulationTag:
+    def dominant_party(self) -> PopulationTag:
         """Determine the dominant party in the population."""
-        if gaussian_generator is None:
-            gaussian_generator = GaussianGenerator()
-        
         dem_weight = self.democrats.weight
         rep_weight = self.republicans.weight
         
@@ -49,7 +49,7 @@ class CombinedPopulation:
         elif rep_weight > dem_weight:
             return REPUBLICANS
         else:
-            return DEMOCRATS if gaussian_generator.next_boolean() else REPUBLICANS
+            return DEMOCRATS if self._gaussian_generator.next_boolean() else REPUBLICANS
     
     def stats(self) -> str:
         """Get statistics for all population groups."""
@@ -105,11 +105,9 @@ class CombinedPopulation:
         """Calculate approximate median ideology."""
         return sum(p.weight * p.mean / self.summed_weight for p in self.populations)
     
-    def random_voter(self, gaussian_generator: Optional[GaussianGenerator] = None) -> Voter:
+    def random_voter(self) -> Voter:
         """Generate a random voter from the population."""
-        if gaussian_generator is None:
-            gaussian_generator = GaussianGenerator()
-        return self._weighted_population().random_voter(gaussian_generator)
+        return self._weighted_population().random_voter(self._gaussian_generator)
     
     def _weighted_population(self) -> PopulationGroup:
         """Select a population group based on weights."""
@@ -128,5 +126,5 @@ class CombinedPopulation:
         voters = []
         for p in self.populations:
             n_group_samples = int(p.weight * n_samples / self.summed_weight)
-            voters.extend(p.population_sample(n_group_samples))
+            voters.extend(p.population_sample(n_group_samples, self._gaussian_generator))
         return voters

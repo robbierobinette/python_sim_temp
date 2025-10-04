@@ -2,11 +2,13 @@
 Population group representing a segment of voters.
 """
 from dataclasses import dataclass
-from typing import List, Optional
-import random
+from typing import List, Optional, TYPE_CHECKING
 from .population_tag import PopulationTag
 from .candidate import Candidate
 from .gaussian_generator import GaussianGenerator
+
+if TYPE_CHECKING:
+    from .voter import Voter
 
 
 @dataclass
@@ -79,13 +81,15 @@ class PopulationGroup:
         """Get party bonus for another population group."""
         return self.tag.party_affinity(other.tag)
     
-    def population_sample(self, n_samples: int) -> List['Voter']:
+    def population_sample(self, n_samples: int, gaussian_generator: Optional[GaussianGenerator] = None) -> List['Voter']:
         """Generate a sample of voters from this population group."""
         from .voter import Voter
+        if gaussian_generator is None:
+            gaussian_generator = GaussianGenerator()
         voters = []
         for _ in range(n_samples):
             # Generate Gaussian sample
-            sample = random.gauss(0, 1) * self.stddev + self.mean
+            sample = gaussian_generator() * self.stddev + self.mean
             voters.append(Voter(party=self, ideology=sample))
         return voters
     

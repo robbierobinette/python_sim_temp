@@ -1,7 +1,7 @@
 """
 Unit population generation for simulation.
 """
-from typing import List
+from typing import Optional
 from .combined_population import CombinedPopulation
 from .population_group import PopulationGroup
 from .population_tag import REPUBLICANS, DEMOCRATS, INDEPENDENTS
@@ -38,25 +38,25 @@ class UnitPopulation:
     
     @staticmethod
     def create_with_params(dvr: DistrictVotingRecord, partisanship: float, 
-                          stddev: float, skew_factor: float, n_voters: int) -> CombinedPopulation:
+                          stddev: float, skew_factor: float, n_voters: int, seed: Optional[int] = None) -> CombinedPopulation:
         """Create population with specified parameters."""
         return UnitPopulation.create_from_lean(
-            dvr.expected_lean, partisanship, stddev, skew_factor, n_voters
+            dvr.expected_lean, partisanship, stddev, skew_factor, n_voters, seed
         )
     
     @staticmethod
     def create_from_lean(lean: float, partisanship: float, stddev: float, 
-                        skew_factor: float, n_voters: int) -> CombinedPopulation:
+                        skew_factor: float, n_voters: int, seed: Optional[int] = None) -> CombinedPopulation:
         """Create population from lean value."""
         r_pct = 0.5 + (lean / 2 / 100)
         d_pct = 0.5 - (lean / 2 / 100)
         return UnitPopulation.create_from_percentages(
-            d_pct, r_pct, partisanship, stddev, skew_factor, n_voters
+            d_pct, r_pct, partisanship, stddev, skew_factor, n_voters, seed
         )
     
     @staticmethod
     def create_from_percentages(d_pct: float, r_pct: float, partisanship: float,
-                               stddev: float, skew_factor: float, n_voters: int) -> CombinedPopulation:
+                               stddev: float, skew_factor: float, n_voters: int, seed: Optional[int] = None) -> CombinedPopulation:
         """Create population from party percentages."""
         i_weight = 0.20
         r_weight = max(0.05, (1 - i_weight) * r_pct)
@@ -90,4 +90,4 @@ class UnitPopulation:
             weight=i_weight * 100
         )
         
-        return CombinedPopulation([rep, dem, ind], n_voters)
+        return CombinedPopulation([rep, dem, ind], n_voters, seed)

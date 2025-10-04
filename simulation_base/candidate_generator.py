@@ -55,7 +55,7 @@ class CandidateGenerator(ABC):
         if gaussian_generator is None:
             gaussian_generator = GaussianGenerator()
         
-        mv_tag = population.dominant_party(gaussian_generator)
+        mv_tag = population.dominant_party()
         return Candidate(
             name=f"{mv_tag.initial}-V",
             tag=mv_tag,
@@ -130,7 +130,7 @@ class NormalPartisanCandidateGenerator(CandidateGenerator):
                 primary_skew: float,
                 median_variance: float,
                 gaussian_generator: Optional[GaussianGenerator] = None,
-                adjust_for_centrists: str = "dominant"):
+):
         """Initialize normal partisan candidate generator."""
         super().__init__(quality_variance)
         self.n_partisan_candidates = n_partisan_candidates
@@ -138,7 +138,6 @@ class NormalPartisanCandidateGenerator(CandidateGenerator):
         self.primary_skew = primary_skew
         self.median_variance = median_variance
         self.gaussian_generator = gaussian_generator or GaussianGenerator()
-        self.adjust_for_centrists = adjust_for_centrists
     
     def candidates(self, population: CombinedPopulation) -> List[Candidate]:
         """Generate all candidates for the population."""
@@ -174,75 +173,8 @@ class NormalPartisanCandidateGenerator(CandidateGenerator):
             )
             candidates.append(candidate)
         
-        # Adjust for centrist constraints based on parameter
-        if self.adjust_for_centrists != "none":
-            candidates = self.adjust_for_centrist(candidates, population)
-        
         return candidates
 
-    def adjust_for_centrist(self, candidates: List[Candidate], population: CombinedPopulation) -> List[Candidate]:
-        """Adjust candidates so the inside-most partisan candidate in the dominant party 
-        is not more than 20% of the population past the median voter.
-        I.e., not less than the 30th percentile for Democrats and not more than the 70th percentile for Republicans."""
-        
-        if self.adjust_for_centrists == "none":
-            return candidates
-        
-        # Infer the dominant party from the median candidate
-        median_candidate = next((c for c in candidates if c.name.endswith('-V')), None)
-        if median_candidate is None:
-            return candidates
-        dominant_party = median_candidate.tag
-        
-        # Get percentile boundaries (30th for Democrats, 70th for Republicans)
-        if dominant_party == DEMOCRATS:
-            min_ideology = population.ideology_for_percentile(0.3)  # 30th percentile
-        else:  # REPUBLICANS
-            max_ideology = population.ideology_for_percentile(0.7)  # 70th percentile
-        
-        # Find the inside-most candidate for the dominant party (excluding median candidates)
-        dominant_candidates = [c for c in candidates if c.tag == dominant_party and not c.name.endswith('-V')]
-        if not dominant_candidates:
-            return candidates
-        
-        # Sort by ideology to find the inside-most candidate
-        dominant_candidates.sort(key=lambda c: c.ideology)
-        
-        if dominant_party == DEMOCRATS:
-            # For Democrats, the inside-most candidate is the one with highest ideology (closest to center)
-            inside_most = dominant_candidates[-1]
-            if inside_most.ideology < min_ideology:
-                inside_most.ideology = min_ideology
-        else:  # REPUBLICANS
-            # For Republicans, the inside-most candidate is the one with lowest ideology (closest to center)
-            inside_most = dominant_candidates[0]
-            if inside_most.ideology > max_ideology:
-                inside_most.ideology = max_ideology
-        
-        # If "both" is specified, also adjust the non-dominant party
-        if self.adjust_for_centrists == "both":
-            non_dominant_party = REPUBLICANS if dominant_party == DEMOCRATS else DEMOCRATS
-            non_dominant_candidates = [c for c in candidates if c.tag == non_dominant_party and not c.name.endswith('-V')]
-            
-            if non_dominant_candidates:
-                non_dominant_candidates.sort(key=lambda c: c.ideology)
-                
-                if non_dominant_party == DEMOCRATS:
-                    # For Democrats, adjust the rightmost candidate (closest to center)
-                    # Use the same percentile boundaries as for dominant party
-                    min_ideology_non_dominant = population.ideology_for_percentile(0.3)  # 30th percentile
-                    rightmost = non_dominant_candidates[-1]
-                    if rightmost.ideology < min_ideology_non_dominant:
-                        rightmost.ideology = min_ideology_non_dominant
-                else:  # REPUBLICANS
-                    # For Republicans, adjust the leftmost candidate (closest to center)
-                    # Use the same percentile boundaries as for dominant party
-                    max_ideology_non_dominant = population.ideology_for_percentile(0.7)  # 70th percentile
-                    leftmost = non_dominant_candidates[0]
-                    if leftmost.ideology > max_ideology_non_dominant:
-                        leftmost.ideology = max_ideology_non_dominant
-        
-        return candidates
 
 class RankCandidateGenerator(CandidateGenerator):
     """Generates candidates based on rank distribution."""
