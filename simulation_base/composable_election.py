@@ -6,6 +6,7 @@ from .election_result import ElectionResult, CandidateResult
 from .election_process import ElectionProcess
 from .election_definition import ElectionDefinition
 from .candidate import Candidate
+from .ballot import RCVBallot
 
 
 class ComposableElectionResult(ElectionResult):
@@ -55,11 +56,12 @@ class ComposableElection(ElectionProcess):
         """Name of the election process."""
         return f"composable_{self.primary_process.name}_to_{self.general_process.name}"
     
-    def run(self, election_def: ElectionDefinition) -> ComposableElectionResult:
+    def run(self, candidates: List[Candidate], ballots: List[RCVBallot]) -> ComposableElectionResult:
         """Run composable election with primary followed by general election.
         
         Args:
-            election_def: Complete election definition with candidates, population, config, etc.
+            candidates: List of candidates in the election
+            ballots: List of ballots from voters
             
         Returns:
             ComposableElectionResult with results from both phases
@@ -67,8 +69,8 @@ class ComposableElection(ElectionProcess):
         if self.debug:
             print(f"Running primary election with {self.primary_process.name}")
         
-        # Run primary election
-        primary_result = self.primary_process.run(election_def)
+        # Run primary election (primary process will handle skewing internally if needed)
+        primary_result = self.primary_process.run(candidates, ballots)
         
         if self.debug:
             print(f"Primary winner: {primary_result.winner().name}")
@@ -80,21 +82,12 @@ class ComposableElection(ElectionProcess):
         # This allows for multi-winner primaries or other scenarios
         primary_candidates = [result.candidate for result in primary_result.ordered_results()]
         
-        # Create new election definition for general election with primary candidates
-        general_election_def = ElectionDefinition(
-            candidates=primary_candidates,
-            population=election_def.population,
-            config=election_def.config,
-            gaussian_generator=election_def.gaussian_generator,
-            state=election_def.state
-        )
-        
         if self.debug:
             print(f"Running general election with {self.general_process.name}")
             print(f"General election candidates: {[c.name for c in primary_candidates]}")
         
-        # Run general election
-        general_result = self.general_process.run(general_election_def)
+        # Run general election with same ballots (no skewing for general)
+        general_result = self.general_process.run(primary_candidates, ballots)
         
         if self.debug:
             print(f"General election winner: {general_result.winner().name}")
@@ -104,8 +97,7 @@ class ComposableElection(ElectionProcess):
         
         # Calculate voter satisfaction based on winner ideology vs population median
         winner = general_result.winner()
-        voters = election_def.population.voters
-        left_voter_count = sum(1 for v in voters if v.ideology < winner.ideology)
-        voter_satisfaction = 1 - abs((2.0 * left_voter_count / len(voters)) - 1)
+        left_voter_count = sum(1 for ballot in ballots if ballot.voter.ideology < winner.ideology)
+        voter_satisfaction = 1 - abs((2.0 * left_voter_count / len(ballots)) - 1)
         
         return ComposableElectionResult(primary_result, general_result, voter_satisfaction)

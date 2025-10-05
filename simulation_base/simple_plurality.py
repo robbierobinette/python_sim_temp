@@ -48,25 +48,8 @@ class SimplePlurality(ElectionProcess):
         """Name of the election process."""
         return "simplePlurality"
     
-    def run(self, election_def) -> SimplePluralityResult:
-        """Run simple plurality election with the given election definition."""
-        # Generate ballots from population
-        ballots = []
-        for voter in election_def.population.voters:
-            ballot = voter.ballot(election_def.candidates, election_def.config, 
-                                 election_def.gaussian_generator)
-            ballots.append(ballot)
-        
-        # Run the election
-        result = self.run_with_ballots(election_def.candidates, ballots)
-        
-        # Set voter satisfaction to 0 (not calculated for simple plurality)
-        result._voter_satisfaction = 0.0
-        
-        return result
-    
-    def run_with_ballots(self, candidates: List[Candidate], ballots: List[RCVBallot]) -> SimplePluralityResult:
-        """Run simple plurality election with given ballots."""
+    def run(self, candidates: List[Candidate], ballots: List[RCVBallot]) -> SimplePluralityResult:
+        """Run simple plurality election with the given candidates and ballots."""
         # Count first-choice votes
         results = {}
         for ballot in ballots:
@@ -81,3 +64,4 @@ class SimplePlurality(ElectionProcess):
                 results[candidate] = 0.0
         
         return SimplePluralityResult(results, 0.0)
+    

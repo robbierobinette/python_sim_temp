@@ -262,7 +262,7 @@ class TestNormalPartisanCandidateGenerator:
         assert generator.ideology_variance == 0.1
         assert generator.primary_skew == 0.25
         assert generator.median_variance == 0.1
-        assert generator.adjust_for_centrists == "dominant"
+        # adjust_for_centrists attribute removed
         assert generator.quality_variance == 0.2
     
     def test_candidates_method(self):

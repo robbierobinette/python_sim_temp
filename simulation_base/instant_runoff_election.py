@@ -111,18 +111,10 @@ class InstantRunoffElection(ElectionProcess):
         """Name of the election process."""
         return "instantRunoff"
     
-    def run(self, election_def) -> RCVResult:
-        """Run IRV election with the given election definition."""
-        # Generate ballots from population
-        ballots = []
-        for voter in election_def.population.voters:
-            ballot = voter.ballot(election_def.candidates, election_def.config, 
-                                 election_def.gaussian_generator)
-            ballots.append(ballot)
-        
+    def run(self, candidates: List[Candidate], ballots: List[RCVBallot]) -> RCVResult:
+        """Run IRV election with the given candidates and ballots."""
         # Run the election
-        rounds = self._compute_rounds([], ballots, set(election_def.candidates), 
-                                     election_def.candidates)
+        rounds = self._compute_rounds([], ballots, set(candidates), candidates)
         if self.debug:
             self._debug_print(rounds)
         
@@ -130,33 +122,13 @@ class InstantRunoffElection(ElectionProcess):
         result = RCVResult(rounds, 0.0)
         if result.rounds:
             winner = result.rounds[-1].winner()
-            left_voter_count = sum(1 for v in election_def.population.voters 
-                                  if v.ideology < winner.ideology)
-            voter_satisfaction = 1 - abs((2.0 * left_voter_count / len(election_def.population.voters)) - 1)
+            left_voter_count = sum(1 for ballot in ballots 
+                                  if ballot.voter.ideology < winner.ideology)
+            voter_satisfaction = 1 - abs((2.0 * left_voter_count / len(ballots)) - 1)
             result._voter_satisfaction = voter_satisfaction
         
         return result
     
-    def run_with_ballots(self, candidates: List[Candidate], ballots: List[RCVBallot]) -> RCVResult:
-        """Run IRV election with given candidates and ballots (legacy method)."""
-        rounds = self._compute_rounds([], ballots, set(candidates), candidates)
-        if self.debug:
-            self._debug_print(rounds)
-        return RCVResult(rounds, 0.0)
-    
-    def run_with_voters(self, voters: List[Voter], candidates: List[Candidate], 
-                       ballots: List[RCVBallot]) -> RCVResult:
-        """Run IRV election and calculate voter satisfaction (legacy method)."""
-        result = self.run_with_ballots(candidates, ballots)
-        
-        # Calculate voter satisfaction
-        if result.rounds:
-            winner = result.rounds[-1].winner()
-            left_voter_count = sum(1 for v in voters if v.ideology < winner.ideology)
-            voter_satisfaction = 1 - abs((2.0 * left_voter_count / len(voters)) - 1)
-            result._voter_satisfaction = voter_satisfaction
-        
-        return result
     
     def _compute_round_result(self, ballots: List[RCVBallot], 
                              active_candidates: Set[Candidate],

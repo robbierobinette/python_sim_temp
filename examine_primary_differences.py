@@ -11,6 +11,7 @@ import json
 import argparse
 from typing import List, Any, Dict
 from dataclasses import dataclass
+from simulation_base.ballot import RCVBallot
 from simulation_base.simulation_runner import parse_simulation_args
 from simulation_base.unit_population import UnitPopulation
 from simulation_base.election_with_primary import ElectionWithPrimary
@@ -130,31 +131,19 @@ def create_population(partisan_lean: int, seed: int, nvoters: int = 1000) -> Any
     )
 
 
-def create_candidates(population: Any, seed: int, args: argparse.Namespace) -> List[Any]:
+def create_candidates(population: Any, seed: int, n_candidates: int, ideology_variance: float = 0.4) -> List[Any]:
     """Create candidates for the population."""
     gaussian_generator = GaussianGenerator(seed)
     candidate_generator = NormalPartisanCandidateGenerator(
-        n_partisan_candidates=args.candidates,
-        ideology_variance=args.ideology_variance,
-        quality_variance=args.quality_variance,
-        primary_skew=args.primary_skew,
+        n_partisan_candidates=n_candidates,
+        ideology_variance=ideology_variance,
+        quality_variance=0.05,
+        primary_skew=0.25,
         median_variance=0.0,
         gaussian_generator=gaussian_generator,
     )
     return candidate_generator.candidates(population)
 
-
-def run_election(election_process: Any, candidates: List[Any], population: Any, 
-                config: ElectionConfig, gaussian_generator: GaussianGenerator, state: str = "AK") -> Any:
-    """Run an election and return the result."""
-    election_def = ElectionDefinition(
-        candidates=candidates,
-        population=population,
-        config=config,
-        gaussian_generator=gaussian_generator,
-        state=state
-    )
-    return election_process.run(election_def)
 
 
 def compare_elections(baseline_result: Any, alt_result: Any, partisan_lean: int, 
@@ -185,27 +174,30 @@ def compare_elections(baseline_result: Any, alt_result: Any, partisan_lean: int,
         alt_satisfaction=alt_result.voter_satisfaction()
     )
 
+def create_ballots(voters: List[Any], candidates: List[Any], config: ElectionConfig, gaussian_generator: GaussianGenerator) -> List[RCVBallot]:
+    return [RCVBallot(v, candidates, config, gaussian_generator) for v in voters]
 
 def run_comparison(partisan_lean: int, iteration: int, election_types: List[Dict[str, Any]], 
                   args: argparse.Namespace) -> List[ComparisonResult]:
     """Run comparison for a single partisan lean and iteration."""
-    seed = partisan_lean + iteration
+    seed = args.seed + partisan_lean + iteration
     results = []
     
     # Create identical population and candidates for all election types
+    gaussian_generator = GaussianGenerator(seed)
     population = create_population(partisan_lean, seed, args.nvoters)
-    candidates = create_candidates(population, seed, args)
+    candidates = create_candidates(population, seed, args.candidates, args.ideology_variance)
+    config = ElectionConfig(uncertainty=args.uncertainty)
+    ballots = create_ballots(population.voters, candidates, config, gaussian_generator)
     
     # Create election config
-    config = ElectionConfig(uncertainty=args.uncertainty)
-    gaussian_generator = GaussianGenerator(seed)
     
     # Run baseline election
     baseline_process = create_election_process("baseline")
-    baseline_result = run_election(baseline_process, candidates, population, config, gaussian_generator)
+    baseline_result = baseline_process.run(candidates, ballots)
 
     names_to_test = set([
-        "closed-partisan-plurality"
+        "closed-partisan-plurality",
     ])
     
     # Run each alternative election type
@@ -224,7 +216,7 @@ def run_comparison(partisan_lean: int, iteration: int, election_types: List[Dict
             print(f"Skipping {election_type_name}")
             continue
         
-        alt_result = run_election(alt_process, candidates, population, config, gaussian_generator)
+        alt_result = alt_process.run(candidates, ballots)
         # Compare results
         comparison = compare_elections(baseline_result, alt_result, partisan_lean, iteration, election_type_name)
         results.append(comparison)
@@ -318,7 +310,7 @@ def main():
     
     for lean in partisan_leans:
         print(f"\nProcessing partisan lean {lean}...")
-        for iteration in range(10):
+        for iteration in range(1):
             if args.verbose:
                 print(f"  Iteration {iteration + 1}/10")
             

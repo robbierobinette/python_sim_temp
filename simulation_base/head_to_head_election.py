@@ -238,27 +238,17 @@ class HeadToHeadElection(ElectionProcess):
         """Name of the election process."""
         return "headToHead"
     
-    def run(self, election_def) -> HeadToHeadResult:
-        """Run head-to-head election with the given election definition."""
-        # Generate ballots from population
-        ballots = []
-        for voter in election_def.population.voters:
-            ballot = voter.ballot(election_def.candidates, election_def.config, 
-                                 election_def.gaussian_generator)
-            ballots.append(ballot)
-        
+    def run(self, candidates: List[Candidate], ballots: List[RCVBallot]) -> HeadToHeadResult:
+        """Run head-to-head election with the given candidates and ballots."""
         # Run the election (accumulator computes all matchups during initialization)
-        accumulator = HeadToHeadAccumulator(election_def.candidates, ballots, election_def.gaussian_generator)
+        accumulator = HeadToHeadAccumulator(candidates, ballots, ballots[0].gaussian_generator if ballots else None)
         
         # Calculate voter satisfaction
-        winner = determine_winner_from_pairwise_outcomes(accumulator.pairwise_outcomes, 
-                                                         election_def.candidates)
-        left_voter_count = sum(1 for v in election_def.population.voters 
-                              if v.ideology < winner.ideology)
-        voter_satisfaction = 1 - abs((2.0 * left_voter_count / len(election_def.population.voters)) - 1)
+        winner = determine_winner_from_pairwise_outcomes(accumulator.pairwise_outcomes, candidates)
+        left_voter_count = sum(1 for ballot in ballots if ballot.voter.ideology < winner.ideology)
+        voter_satisfaction = 1 - abs((2.0 * left_voter_count / len(ballots)) - 1)
         
-        result = HeadToHeadResult(accumulator.pairwise_outcomes, election_def.candidates, 
-                                 voter_satisfaction)
+        result = HeadToHeadResult(accumulator.pairwise_outcomes, candidates, voter_satisfaction)
         
         return result
     

@@ -3,6 +3,7 @@ Tests for Voter class.
 """
 import pytest
 from simulation_base.voter import Voter
+from simulation_base.ballot import RCVBallot
 from simulation_base.population_group import PopulationGroup
 from simulation_base.population_tag import DEMOCRATS, REPUBLICANS, INDEPENDENTS
 from simulation_base.candidate import Candidate
@@ -177,7 +178,7 @@ class TestVoter:
         
         # Test with mock Gaussian generator
         mock_generator = GaussianGenerator(seed=42)
-        ballot = voter.ballot(candidates, config, mock_generator)
+        ballot = RCVBallot(voter, candidates, config, mock_generator)
         
         # Check ballot structure
         assert hasattr(ballot, 'sorted_candidates')
@@ -306,7 +307,7 @@ class TestVoterEdgeCases:
         favorite_idx = voter.favorite(candidates, config, mock_generator)
         assert favorite_idx == 0
         
-        ballot = voter.ballot(candidates, config, mock_generator)
+        ballot = RCVBallot(voter, candidates, config, mock_generator)
         assert len(ballot.sorted_candidates) == 1
         assert ballot.sorted_candidates[0].candidate == candidates[0]
     
@@ -330,7 +331,7 @@ class TestVoterEdgeCases:
         favorite_idx = voter.favorite(candidates, config, mock_generator)
         assert favorite_idx == -1  # No favorite found
         
-        ballot = voter.ballot(candidates, config, mock_generator)
+        ballot = RCVBallot(voter, candidates, config, mock_generator)
         assert len(ballot.sorted_candidates) == 0
 
 

@@ -4,7 +4,7 @@ Top-2 primary election implementation.
 from typing import List
 from .election_result import ElectionResult, CandidateResult
 from .election_process import ElectionProcess
-from .election_definition import ElectionDefinition
+from .ballot import RCVBallot
 from .candidate import Candidate
 from .simple_plurality import SimplePlurality
 
@@ -75,31 +75,24 @@ class Top2Primary(ElectionProcess):
         """Name of the election process."""
         return "top2Primary"
     
-    def run(self, election_def: ElectionDefinition) -> Top2PrimaryResult:
+    def run(self, candidates: List[Candidate], ballots: List[RCVBallot]) -> Top2PrimaryResult:
         """Run top-2 primary election where all voters vote in the same primary.
         
         Args:
-            election_def: Complete election definition with candidates, population, config, etc.
+            candidates: List of candidates in the election
+            ballots: List of ballots from voters
             
         Returns:
             Top2PrimaryResult with top 2 candidates advancing to general election
         """
         if self.debug:
             print("Running top-2 primary election")
-            print(f"All candidates: {[c.name for c in election_def.candidates]}")
-        
-        # Create ballots for all voters
-        all_ballots = []
-        for voter in election_def.population.voters:
-            ballot = voter.ballot(election_def.candidates, election_def.config, election_def.gaussian_generator)
-            all_ballots.append(ballot)
-        
-        if self.debug:
-            print(f"Total ballots: {len(all_ballots)}")
+            print(f"All candidates: {[c.name for c in candidates]}")
+            print(f"Total ballots: {len(ballots)}")
         
         # Run single primary election using simple plurality
         primary_process = SimplePlurality(debug=self.debug)
-        primary_result = primary_process.run_with_ballots(election_def.candidates, all_ballots)
+        primary_result = primary_process.run(candidates, ballots)
         
         if self.debug:
             print("Primary results:")
@@ -109,4 +102,4 @@ class Top2Primary(ElectionProcess):
             top2 = [result.candidate.name for result in primary_result.ordered_results()[:2]]
             print(f"Top 2 candidates advancing: {top2}")
         
-        return Top2PrimaryResult(primary_result, election_def.candidates)
+        return Top2PrimaryResult(primary_result, candidates)

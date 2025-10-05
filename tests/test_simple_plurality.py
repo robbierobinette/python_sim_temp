@@ -6,7 +6,25 @@ from simulation_base.simple_plurality import SimplePlurality, SimplePluralityRes
 from simulation_base.candidate import Candidate
 from simulation_base.population_tag import DEMOCRATS, REPUBLICANS, INDEPENDENTS
 from simulation_base.ballot import RCVBallot, CandidateScore
+from simulation_base.population_group import PopulationGroup
+from simulation_base.voter import Voter
+from simulation_base.election_config import ElectionConfig
 from simulation_base.election_result import CandidateResult
+
+
+def create_test_ballot(candidates, voter_ideology=-0.3, voter_party=DEMOCRATS):
+    """Helper function to create a test ballot with the new interface."""
+    population_group = PopulationGroup(
+        tag=voter_party,
+        party_bonus=1.0,
+        mean=-0.5,
+        stddev=1.0,
+        skew=0.0,
+        weight=100.0
+    )
+    voter = Voter(party=population_group, ideology=voter_ideology)
+    config = ElectionConfig(uncertainty=0.1)
+    return RCVBallot(voter, candidates, config)
 
 
 class TestSimplePluralityResult:
@@ -125,18 +143,18 @@ class TestSimplePlurality:
             CandidateScore(candidate=candidates[0], score=0.8),  # Alice preferred
             CandidateScore(candidate=candidates[1], score=0.6)   # Bob less preferred
         ]
-        ballot1 = RCVBallot(unsorted_candidates=candidate_scores)
+        ballot1 = create_test_ballot(candidates)
         
         candidate_scores = [
             CandidateScore(candidate=candidates[0], score=0.7),  # Alice preferred
             CandidateScore(candidate=candidates[1], score=0.5)   # Bob less preferred
         ]
-        ballot2 = RCVBallot(unsorted_candidates=candidate_scores)
+        ballot2 = create_test_ballot(candidates)
         
         ballots = [ballot1, ballot2]
         
         plurality = SimplePlurality()
-        result = plurality.run_with_ballots(candidates, ballots)
+        result = plurality.run(candidates, ballots)
         
         assert isinstance(result, SimplePluralityResult)
         assert result.winner() == candidates[0]  # Alice should win
@@ -158,10 +176,10 @@ class TestSimplePlurality:
                 CandidateScore(candidate=candidates[1], score=0.3),  # Bob
                 CandidateScore(candidate=candidates[2], score=0.5)   # Charlie
             ]
-            ballots.append(RCVBallot(unsorted_candidates=candidate_scores))
+            ballots.append(create_test_ballot(candidates))
         
         plurality = SimplePlurality()
-        result = plurality.run_with_ballots(candidates, ballots)
+        result = plurality.run(candidates, ballots)
         
         assert result.winner() == candidates[0]  # Alice
         assert result.n_votes == 5.0
@@ -183,18 +201,18 @@ class TestSimplePlurality:
             CandidateScore(candidate=candidates[0], score=0.5),  # Alice
             CandidateScore(candidate=candidates[1], score=0.5)   # Bob (tied)
         ]
-        ballot1 = RCVBallot(unsorted_candidates=candidate_scores)
+        ballot1 = create_test_ballot(candidates)
         
         candidate_scores = [
             CandidateScore(candidate=candidates[0], score=0.5),  # Alice (tied)
             CandidateScore(candidate=candidates[1], score=0.5)   # Bob
         ]
-        ballot2 = RCVBallot(unsorted_candidates=candidate_scores)
+        ballot2 = create_test_ballot(candidates)
         
         ballots = [ballot1, ballot2]
         
         plurality = SimplePlurality()
-        result = plurality.run_with_ballots(candidates, ballots)
+        result = plurality.run(candidates, ballots)
         
         # Should handle tie (winner determined by ballot order/tie-breaking)
         assert result.n_votes == 2.0
@@ -215,10 +233,10 @@ class TestSimplePlurality:
             CandidateScore(candidate=candidates[1], score=0.1),  # Bob
             CandidateScore(candidate=candidates[2], score=0.2)   # Charlie
         ]
-        ballot = RCVBallot(unsorted_candidates=candidate_scores)
+        ballot = create_test_ballot(candidates)
         
         plurality = SimplePlurality()
-        result = plurality.run_with_ballots(candidates, [ballot])
+        result = plurality.run(candidates, [ballot])
         
         # All candidates should be in results
         ordered = result.ordered_results()
@@ -246,7 +264,7 @@ class TestSimplePlurality:
         ]
         
         plurality = SimplePlurality()
-        result = plurality.run_with_ballots(candidates, [])
+        result = plurality.run(candidates, [])
         
         # Should handle empty ballots
         assert result.n_votes == 0.0
@@ -267,10 +285,10 @@ class TestSimplePlurality:
         candidate_scores = [
             CandidateScore(candidate=candidates[0], score=0.8)
         ]
-        ballot = RCVBallot(unsorted_candidates=candidate_scores)
+        ballot = create_test_ballot(candidates)
         
         plurality = SimplePlurality()
-        result = plurality.run_with_ballots(candidates, [ballot])
+        result = plurality.run(candidates, [ballot])
         
         assert result.winner() == candidates[0]
         assert result.n_votes == 1.0
@@ -287,13 +305,10 @@ class TestSimplePlurality:
         
         # Create ballot with candidates not in the active set
         other_candidate = Candidate(name="Other", tag=INDEPENDENTS, ideology=0.0, quality=0.5, incumbent=False)
-        candidate_scores = [
-            CandidateScore(candidate=other_candidate, score=0.8)  # Not in candidates list
-        ]
-        ballot = RCVBallot(unsorted_candidates=candidate_scores)
+        ballot = create_test_ballot([other_candidate])  # Only the "other" candidate
         
         plurality = SimplePlurality()
-        result = plurality.run_with_ballots(candidates, [ballot])
+        result = plurality.run(candidates, [ballot])
         
         # Should handle ballot with no valid first choice
         assert result.n_votes == 0.0
@@ -316,10 +331,10 @@ class TestSimplePluralityEdgeCases:
         candidate_scores = [
             CandidateScore(candidate=candidate, score=0.8)
         ]
-        ballot = RCVBallot(unsorted_candidates=candidate_scores)
+        ballot = create_test_ballot(candidates)
         
         plurality = SimplePlurality()
-        result = plurality.run_with_ballots(candidates, [ballot])
+        result = plurality.run(candidates, [ballot])
         
         # Should handle duplicate candidates - current implementation deduplicates by candidate object
         assert result.n_votes == 1.0
@@ -340,10 +355,10 @@ class TestSimplePluralityEdgeCases:
                 CandidateScore(candidate=candidates[0], score=0.8),
                 CandidateScore(candidate=candidates[1], score=0.6)
             ]
-            ballots.append(RCVBallot(unsorted_candidates=candidate_scores))
+            ballots.append(create_test_ballot(candidates))
         
         plurality = SimplePlurality()
-        result = plurality.run_with_ballots(candidates, ballots)
+        result = plurality.run(candidates, ballots)
         
         assert result.n_votes == 1000.0
         assert result.winner() == candidates[0]  # Alice should win
@@ -360,10 +375,10 @@ class TestSimplePluralityEdgeCases:
             CandidateScore(candidate=candidates[0], score=0.8),
             CandidateScore(candidate=candidates[1], score=0.6)
         ]
-        ballot = RCVBallot(unsorted_candidates=candidate_scores)
+        ballot = create_test_ballot(candidates)
         
         plurality = SimplePlurality()
-        result = plurality.run_with_ballots(candidates, [ballot])
+        result = plurality.run(candidates, [ballot])
         
         # Should handle fractional votes
         assert result.n_votes == 1.0
@@ -437,11 +452,11 @@ class TestSimplePluralityIntegration:
         # Generate ballot using voter
         from simulation_base.gaussian_generator import GaussianGenerator
         mock_generator = GaussianGenerator(seed=42)
-        ballot = voter.ballot(candidates, config, mock_generator)
+        ballot = RCVBallot(voter, candidates, config, mock_generator)
         
         # Run simple plurality
         plurality = SimplePlurality()
-        result = plurality.run_with_ballots(candidates, [ballot])
+        result = plurality.run(candidates, [ballot])
         
         # Verify result
         assert result.n_votes == 1.0

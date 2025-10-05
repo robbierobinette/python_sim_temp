@@ -4,7 +4,7 @@ Top-N primary election implementation.
 from typing import List
 from .election_result import ElectionResult, CandidateResult
 from .election_process import ElectionProcess
-from .election_definition import ElectionDefinition
+from .ballot import RCVBallot
 from .candidate import Candidate
 from .simple_plurality import SimplePlurality
 
@@ -79,31 +79,24 @@ class TopNPrimary(ElectionProcess):
         """Name of the election process."""
         return f"top{self.n}Primary"
     
-    def run(self, election_def: ElectionDefinition) -> TopNPrimaryResult:
+    def run(self, candidates: List[Candidate], ballots: List[RCVBallot]) -> TopNPrimaryResult:
         """Run top-N primary election where all voters vote in the same primary.
         
         Args:
-            election_def: Complete election definition with candidates, population, config, etc.
+            candidates: List of candidates in the election
+            ballots: List of ballots from voters
             
         Returns:
             TopNPrimaryResult with top N candidates advancing to general election
         """
         if self.debug:
             print(f"Running top-{self.n} primary election")
-            print(f"All candidates: {[c.name for c in election_def.candidates]}")
-        
-        # Create ballots for all voters
-        all_ballots = []
-        for voter in election_def.population.voters:
-            ballot = voter.ballot(election_def.candidates, election_def.config, election_def.gaussian_generator)
-            all_ballots.append(ballot)
-        
-        if self.debug:
-            print(f"Total ballots: {len(all_ballots)}")
+            print(f"All candidates: {[c.name for c in candidates]}")
+            print(f"Total ballots: {len(ballots)}")
         
         # Run single primary election using simple plurality
         primary_process = SimplePlurality(debug=self.debug)
-        primary_result = primary_process.run_with_ballots(election_def.candidates, all_ballots)
+        primary_result = primary_process.run(candidates, ballots)
         
         if self.debug:
             print("Primary results:")
@@ -113,4 +106,4 @@ class TopNPrimary(ElectionProcess):
             topn = [result.candidate.name for result in primary_result.ordered_results()[:self.n]]
             print(f"Top {self.n} candidates advancing: {topn}")
         
-        return TopNPrimaryResult(primary_result, election_def.candidates, self.n)
+        return TopNPrimaryResult(primary_result, candidates, self.n)

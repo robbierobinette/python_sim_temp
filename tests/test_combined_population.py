@@ -339,7 +339,7 @@ class TestCombinedPopulation:
         
         # Test with custom generator
         mock_generator = GaussianGenerator(seed=42)
-        voter_custom = population.random_voter(mock_generator)
+        voter_custom = population.random_voter()
         assert isinstance(voter_custom, Voter)
         assert voter_custom.party in groups
 

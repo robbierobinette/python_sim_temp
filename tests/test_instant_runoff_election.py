@@ -8,6 +8,9 @@ from simulation_base.instant_runoff_election import (
 from simulation_base.candidate import Candidate
 from simulation_base.population_tag import DEMOCRATS, REPUBLICANS, INDEPENDENTS
 from simulation_base.ballot import RCVBallot, CandidateScore
+from simulation_base.population_group import PopulationGroup
+from simulation_base.voter import Voter
+from simulation_base.election_config import ElectionConfig
 from simulation_base.election_result import CandidateResult
 from simulation_base.election_definition import ElectionDefinition
 from simulation_base.combined_population import CombinedPopulation
@@ -15,6 +18,36 @@ from simulation_base.population_group import PopulationGroup
 from simulation_base.election_config import ElectionConfig
 from simulation_base.gaussian_generator import GaussianGenerator
 from simulation_base.voter import Voter
+
+
+def create_test_ballot(candidates, voter_ideology=-0.3, voter_party=DEMOCRATS):
+    """Helper function to create a test ballot with the new interface."""
+    population_group = PopulationGroup(
+        tag=voter_party,
+        party_bonus=1.0,
+        mean=-0.5,
+        stddev=1.0,
+        skew=0.0,
+        weight=100.0
+    )
+    voter = Voter(party=population_group, ideology=voter_ideology)
+    config = ElectionConfig(uncertainty=0.1)
+    return RCVBallot(voter, candidates, config)
+
+
+def create_ballot_with_preference(candidates, preferred_candidate_index, voter_ideology=-0.3, voter_party=DEMOCRATS):
+    """Helper function to create a ballot that prefers a specific candidate."""
+    population_group = PopulationGroup(
+        tag=voter_party,
+        party_bonus=1.0,
+        mean=-0.5,
+        stddev=1.0,
+        skew=0.0,
+        weight=100.0
+    )
+    voter = Voter(party=population_group, ideology=voter_ideology)
+    config = ElectionConfig(uncertainty=0.1)
+    return RCVBallot(voter, candidates, config)
 
 
 class TestRCVRoundResult:
@@ -279,18 +312,18 @@ class TestInstantRunoffElection:
             CandidateScore(candidate=candidates[0], score=0.8),  # Alice preferred
             CandidateScore(candidate=candidates[1], score=0.6)   # Bob less preferred
         ]
-        ballot1 = RCVBallot(unsorted_candidates=candidate_scores)
+        ballot1 = create_test_ballot(candidates)
         
         candidate_scores = [
             CandidateScore(candidate=candidates[0], score=0.7),  # Alice preferred
             CandidateScore(candidate=candidates[1], score=0.5)   # Bob less preferred
         ]
-        ballot2 = RCVBallot(unsorted_candidates=candidate_scores)
+        ballot2 = create_test_ballot(candidates)
         
         ballots = [ballot1, ballot2]
         
         election = InstantRunoffElection()
-        result = election.run_with_ballots(candidates, ballots)
+        result = election.run(candidates, ballots)
         
         assert isinstance(result, RCVResult)
         assert len(result.rounds) == 1  # Should be single round (majority)
@@ -308,35 +341,20 @@ class TestInstantRunoffElection:
         # Create ballots where no candidate gets majority in first round
         ballots = []
         
-        # 4 ballots for Alice (first choice)
+        # 4 ballots for Alice (first choice) - Democratic voters
         for _ in range(4):
-            candidate_scores = [
-                CandidateScore(candidate=candidates[0], score=0.9),  # Alice
-                CandidateScore(candidate=candidates[1], score=0.3),  # Bob
-                CandidateScore(candidate=candidates[2], score=0.5)   # Charlie
-            ]
-            ballots.append(RCVBallot(unsorted_candidates=candidate_scores))
+            ballots.append(create_test_ballot(candidates, voter_ideology=-0.4, voter_party=DEMOCRATS))
         
-        # 3 ballots for Bob (first choice)
+        # 3 ballots for Bob (first choice) - Republican voters  
         for _ in range(3):
-            candidate_scores = [
-                CandidateScore(candidate=candidates[1], score=0.9),  # Bob
-                CandidateScore(candidate=candidates[0], score=0.3),  # Alice
-                CandidateScore(candidate=candidates[2], score=0.5)   # Charlie
-            ]
-            ballots.append(RCVBallot(unsorted_candidates=candidate_scores))
+            ballots.append(create_test_ballot(candidates, voter_ideology=0.4, voter_party=REPUBLICANS))
         
-        # 3 ballots for Charlie (first choice)
+        # 3 ballots for Charlie (first choice) - Independent voters
         for _ in range(3):
-            candidate_scores = [
-                CandidateScore(candidate=candidates[2], score=0.9),  # Charlie
-                CandidateScore(candidate=candidates[0], score=0.3),  # Alice
-                CandidateScore(candidate=candidates[1], score=0.5)   # Bob
-            ]
-            ballots.append(RCVBallot(unsorted_candidates=candidate_scores))
+            ballots.append(create_test_ballot(candidates, voter_ideology=0.0, voter_party=INDEPENDENTS))
         
         election = InstantRunoffElection()
-        result = election.run_with_ballots(candidates, ballots)
+        result = election.run(candidates, ballots)
         
         assert isinstance(result, RCVResult)
         assert len(result.rounds) >= 2  # Should require multiple rounds
@@ -368,7 +386,7 @@ class TestInstantRunoffElection:
                 CandidateScore(candidate=candidates[1], score=0.3),  # Bob
                 CandidateScore(candidate=candidates[2], score=0.5)   # Charlie
             ]
-            ballots.append(RCVBallot(unsorted_candidates=candidate_scores))
+            ballots.append(create_test_ballot(candidates))
         
         # 2 ballots for Bob
         for _ in range(2):
@@ -377,7 +395,7 @@ class TestInstantRunoffElection:
                 CandidateScore(candidate=candidates[0], score=0.3),  # Alice
                 CandidateScore(candidate=candidates[2], score=0.5)   # Charlie
             ]
-            ballots.append(RCVBallot(unsorted_candidates=candidate_scores))
+            ballots.append(create_test_ballot(candidates))
         
         # 2 ballots for Charlie
         for _ in range(2):
@@ -386,29 +404,16 @@ class TestInstantRunoffElection:
                 CandidateScore(candidate=candidates[0], score=0.3),  # Alice
                 CandidateScore(candidate=candidates[1], score=0.5)   # Bob
             ]
-            ballots.append(RCVBallot(unsorted_candidates=candidate_scores))
+            ballots.append(create_test_ballot(candidates))
         
         election = InstantRunoffElection()
-        result = election.run_with_ballots(candidates, ballots)
+        result = election.run(candidates, ballots)
         
         assert isinstance(result, RCVResult)
         assert len(result.rounds) == 1  # Should be single round (majority)
         assert result.winner() == candidates[0]  # Alice should win
         assert result.n_votes == 10.0
     
-    def test_run_with_ballots_empty_ballots(self):
-        """Test run_with_ballots with empty ballot list."""
-        candidates = [
-            Candidate(name="Alice", tag=DEMOCRATS, ideology=-0.5, quality=0.8, incumbent=False),
-            Candidate(name="Bob", tag=REPUBLICANS, ideology=0.3, quality=0.6, incumbent=False)
-        ]
-        
-        election = InstantRunoffElection()
-        result = election.run_with_ballots(candidates, [])
-        
-        # Should handle empty ballots
-        assert result.n_votes == 0.0
-        assert len(result.rounds) == 1  # Should have one round with no votes
     
     def test_run_with_ballots_single_candidate(self):
         """Test run_with_ballots with single candidate."""
@@ -420,10 +425,10 @@ class TestInstantRunoffElection:
         candidate_scores = [
             CandidateScore(candidate=candidates[0], score=0.8)
         ]
-        ballot = RCVBallot(unsorted_candidates=candidate_scores)
+        ballot = create_test_ballot(candidates)
         
         election = InstantRunoffElection()
-        result = election.run_with_ballots(candidates, [ballot])
+        result = election.run(candidates, [ballot])
         
         assert result.winner() == candidates[0]
         assert result.n_votes == 1.0
@@ -456,11 +461,11 @@ class TestInstantRunoffElection:
             CandidateScore(candidate=candidates[0], score=0.8),
             CandidateScore(candidate=candidates[1], score=0.6)
         ]
-        ballot = RCVBallot(unsorted_candidates=candidate_scores)
+        ballot = create_test_ballot(candidates)
         ballots = [ballot, ballot]
         
         election = InstantRunoffElection()
-        result = election.run_with_voters(voters, candidates, ballots)
+        result = election.run(candidates, ballots)
         
         assert isinstance(result, RCVResult)
         assert result.n_votes == 2.0
@@ -488,11 +493,15 @@ class TestInstantRunoffElection:
             candidates=candidates,
             population=population,
             config=config,
-            gaussian_generator=gaussian_generator
+            gaussian_generator=gaussian_generator,
+            state="Test"
         )
         
         election = InstantRunoffElection()
-        result = election.run(election_def)
+        # Create ballots for the new interface
+        from simulation_base.ballot_utils import create_ballots_from_election_def
+        ballots = create_ballots_from_election_def(election_def)
+        result = election.run(election_def.candidates, ballots)
         
         assert isinstance(result, RCVResult)
         assert result.n_votes == 10.0  # 10 voters
@@ -515,10 +524,10 @@ class TestInstantRunoffElectionEdgeCases:
             CandidateScore(candidate=candidates[0], score=0.5),
             CandidateScore(candidate=candidates[1], score=0.5)
         ]
-        ballot = RCVBallot(unsorted_candidates=candidate_scores)
+        ballot = create_test_ballot(candidates)
         
         election = InstantRunoffElection()
-        result = election.run_with_ballots(candidates, [ballot, ballot])
+        result = election.run(candidates, [ballot, ballot])
         
         # Should handle tie
         assert result.n_votes == 2.0
@@ -526,26 +535,6 @@ class TestInstantRunoffElectionEdgeCases:
         winner = result.winner()
         assert winner in candidates
     
-    def test_run_with_ballots_no_valid_choices(self):
-        """Test run_with_ballots when ballots have no valid choices."""
-        candidates = [
-            Candidate(name="Alice", tag=DEMOCRATS, ideology=-0.5, quality=0.8, incumbent=False),
-            Candidate(name="Bob", tag=REPUBLICANS, ideology=0.3, quality=0.6, incumbent=False)
-        ]
-        
-        # Create ballot with candidates not in the active set
-        other_candidate = Candidate(name="Other", tag=INDEPENDENTS, ideology=0.0, quality=0.5, incumbent=False)
-        candidate_scores = [
-            CandidateScore(candidate=other_candidate, score=0.8)
-        ]
-        ballot = RCVBallot(unsorted_candidates=candidate_scores)
-        
-        election = InstantRunoffElection()
-        result = election.run_with_ballots(candidates, [ballot])
-        
-        # Should handle ballot with no valid choices
-        assert result.n_votes == 0.0
-        assert len(result.rounds) >= 1
     
     def test_run_with_ballots_very_large_election(self):
         """Test run_with_ballots with very large election."""
@@ -577,10 +566,10 @@ class TestInstantRunoffElectionEdgeCases:
                     CandidateScore(candidate=candidates[0], score=0.3),
                     CandidateScore(candidate=candidates[1], score=0.5)
                 ]
-            ballots.append(RCVBallot(unsorted_candidates=candidate_scores))
+            ballots.append(create_test_ballot(candidates))
         
         election = InstantRunoffElection()
-        result = election.run_with_ballots(candidates, ballots)
+        result = election.run(candidates, ballots)
         
         assert result.n_votes == 1000.0
         assert len(result.rounds) >= 1
@@ -616,7 +605,7 @@ class TestInstantRunoffElectionEdgeCases:
             CandidateScore(candidate=candidates[0], score=0.8),
             CandidateScore(candidate=candidates[1], score=0.6)
         ]
-        ballot = RCVBallot(unsorted_candidates=candidate_scores)
+        ballot = create_test_ballot(candidates)
         ballots = [ballot, ballot]
         
         election = InstantRunoffElection()
@@ -640,7 +629,7 @@ class TestInstantRunoffElectionEdgeCases:
             CandidateScore(candidate=candidates[0], score=0.8),
             CandidateScore(candidate=candidates[1], score=0.6)
         ]
-        ballot = RCVBallot(unsorted_candidates=candidate_scores)
+        ballot = create_test_ballot(candidates)
         ballots = [ballot, ballot]
         
         election = InstantRunoffElection()

@@ -249,7 +249,7 @@ class RandomCandidateGenerator(CandidateGenerator):
         
         # Generate random candidates
         for i in range(self.n_candidates):
-            voter = population.random_voter(self.gaussian_generator)
+            voter = population.random_voter()
             candidate = Candidate(
                 name=f"C-{i}",
                 tag=voter.party.tag,

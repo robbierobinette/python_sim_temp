@@ -35,7 +35,8 @@ class TestElectionDefinition:
             candidates=candidates,
             population=population,
             config=config,
-            gaussian_generator=gaussian_generator
+            gaussian_generator=gaussian_generator,
+            state="Test"
         )
         
         assert election_def.candidates == candidates
@@ -61,7 +62,8 @@ class TestElectionDefinition:
             candidates=candidates,
             population=population,
             config=config,
-            gaussian_generator=gaussian_generator
+            gaussian_generator=gaussian_generator,
+            state="Test"
         )
         
         assert election_def.candidates == []
@@ -89,7 +91,8 @@ class TestElectionDefinition:
             candidates=candidates,
             population=population,
             config=config,
-            gaussian_generator=gaussian_generator
+            gaussian_generator=gaussian_generator,
+            state="Test"
         )
         
         assert len(election_def.candidates) == 1
@@ -122,7 +125,8 @@ class TestElectionDefinition:
             candidates=candidates,
             population=population,
             config=config,
-            gaussian_generator=gaussian_generator
+            gaussian_generator=gaussian_generator,
+            state="Test"
         )
         
         assert len(election_def.candidates) == 4
@@ -163,7 +167,8 @@ class TestElectionDefinition:
                 candidates=candidates,
                 population=population,
                 config=config,
-                gaussian_generator=gaussian_generator
+                gaussian_generator=gaussian_generator,
+                state="Test"
             )
             
             assert election_def.config == config
@@ -201,7 +206,8 @@ class TestElectionDefinition:
                 candidates=candidates,
                 population=population,
                 config=config,
-                gaussian_generator=generator
+                gaussian_generator=generator,
+                state="Test"
             )
             
             assert election_def.gaussian_generator == generator
@@ -233,7 +239,8 @@ class TestElectionDefinition:
                 candidates=candidates,
                 population=population,
                 config=config,
-                gaussian_generator=gaussian_generator
+                gaussian_generator=gaussian_generator,
+                state="Test"
             )
             
             assert election_def.population == population
@@ -265,7 +272,8 @@ class TestElectionDefinitionEdgeCases:
             candidates=candidates,
             population=population,
             config=config,
-            gaussian_generator=gaussian_generator
+            gaussian_generator=gaussian_generator,
+            state="Test"
         )
         
         assert len(election_def.candidates) == 2
@@ -306,7 +314,8 @@ class TestElectionDefinitionEdgeCases:
             candidates=candidates,
             population=population,
             config=config,
-            gaussian_generator=gaussian_generator
+            gaussian_generator=gaussian_generator,
+            state="Test"
         )
         
         assert election_def.candidates == candidates
@@ -345,7 +354,8 @@ class TestElectionDefinitionEdgeCases:
                 candidates=candidates,
                 population=population,
                 config=config,
-                gaussian_generator=gaussian_generator
+                gaussian_generator=gaussian_generator,
+                state="Test"
             )
             
             assert election_def.config == config
@@ -385,7 +395,8 @@ class TestElectionDefinitionIntegration:
             candidates=candidates,
             population=population,
             config=config,
-            gaussian_generator=gaussian_generator
+            gaussian_generator=gaussian_generator,
+            state="Test"
         )
         
         # Test with different election processes
@@ -396,7 +407,10 @@ class TestElectionDefinitionIntegration:
         ]
         
         for process in processes:
-            result = process.run(election_def)
+            # Create ballots for the new interface
+            from simulation_base.ballot_utils import create_ballots_from_election_def
+            ballots = create_ballots_from_election_def(election_def)
+            result = process.run(election_def.candidates, ballots)
             
             # Should return an election result
             assert hasattr(result, 'winner')
@@ -449,7 +463,8 @@ class TestElectionDefinitionIntegration:
             candidates=candidates,
             population=population,
             config=config,
-            gaussian_generator=gaussian_generator
+            gaussian_generator=gaussian_generator,
+            state="Test"
         )
         
         assert election_def.candidates == candidates
@@ -480,7 +495,8 @@ class TestElectionDefinitionIntegration:
             candidates=candidates,
             population=population,
             config=config,
-            gaussian_generator=gaussian_generator
+            gaussian_generator=gaussian_generator,
+            state="Test"
         )
         
         # Test that election_def can be converted to dict (if dataclass)
@@ -524,7 +540,8 @@ class TestElectionDefinitionIntegration:
             candidates=candidates,
             population=population,
             config=config,
-            gaussian_generator=gaussian_generator
+            gaussian_generator=gaussian_generator,
+            state="Test"
         )
         
         # Test shallow copy

@@ -3,14 +3,15 @@ Smart primary election that reads election_types.json and creates the appropriat
 """
 import json
 import os
-from typing import Dict, Any
+from typing import Dict, Any, List
 from .election_process import ElectionProcess
-from .election_definition import ElectionDefinition
+from .ballot import RCVBallot
 from .election_result import ElectionResult
 from .composable_election import ComposableElection
 from .closed_primary import ClosedPrimary, ClosedPrimaryConfig
 from .open_primary import OpenPrimary, OpenPrimaryConfig
 from .topn_primary import TopNPrimary
+from .candidate import Candidate
 from .simple_plurality import SimplePlurality
 from .instant_runoff_election import InstantRunoffElection
 from .plurality_with_runoff import PluralityWithRunoff
@@ -170,16 +171,19 @@ class SmartPrimaryElection(ElectionProcess):
         """Name of the election process."""
         return "smartPrimary"
     
-    def run(self, election_def: ElectionDefinition) -> ElectionResult:
+    def run(self, candidates: List[Candidate], ballots: List[RCVBallot]) -> ElectionResult:
         """Run smart primary election based on state configuration.
         
         Args:
-            election_def: Election definition containing state information
+            candidates: List of candidates in the election
+            ballots: List of ballots from voters
             
         Returns:
             Election result from the appropriate ComposableElection
         """
-        state = election_def.state
+        # For now, default to Texas configuration since we don't have state info in the new interface
+        # TODO: Consider how to handle state-specific logic in the new interface
+        state = "Texas"
         
         if self.debug:
             print(f"Running smart primary election for state: {state}")
@@ -188,4 +192,4 @@ class SmartPrimaryElection(ElectionProcess):
         election = self._get_election_for_state(state)
         
         # Run the election
-        return election.run(election_def)
+        return election.run(candidates, ballots)

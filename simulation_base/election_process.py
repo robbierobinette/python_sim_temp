@@ -2,19 +2,22 @@
 Abstract base class for election processes.
 """
 from abc import ABC, abstractmethod
+from typing import List
 from .election_result import ElectionResult
-from .election_definition import ElectionDefinition
+from .ballot import RCVBallot
+from .candidate import Candidate
 
 
 class ElectionProcess(ABC):
     """Abstract base class for all election processes."""
     
     @abstractmethod
-    def run(self, election_def: ElectionDefinition) -> ElectionResult:
-        """Run an election with the given election definition.
+    def run(self, candidates: List[Candidate], ballots: List[RCVBallot]) -> ElectionResult:
+        """Run an election with the given candidates and ballots.
         
         Args:
-            election_def: Complete election definition with candidates, population, config, etc.
+            candidates: List of candidates in the election
+            ballots: List of ballots from voters
             
         Returns:
             ElectionResult with winner, voter_satisfaction, and ordered_results

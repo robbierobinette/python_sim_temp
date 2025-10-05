@@ -26,8 +26,9 @@ def parse_simulation_args(description: str = "Simulate congressional elections")
     )
     parser.add_argument(
         "--seed", 
+        default=0,
         type=int,
-        help="Random seed for reproducible results"
+        help="Random seed for reproducible results (default: 0)"
     )
     parser.add_argument(
         "--candidates", 

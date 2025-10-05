@@ -7,7 +7,6 @@ from .population_group import PopulationGroup
 from .candidate import Candidate
 from .election_config import ElectionConfig
 from .gaussian_generator import GaussianGenerator
-from .ballot import RCVBallot
 
 
 @dataclass
@@ -56,16 +55,3 @@ class Voter:
         
         return favorite_idx
     
-    def ballot(self, candidates: List[Candidate], config: ElectionConfig,
-               gaussian_generator: Optional[GaussianGenerator] = None) -> 'RCVBallot':
-        """Generate a ranked choice ballot."""
-        from .ballot import RCVBallot, CandidateScore
-        if gaussian_generator is None:
-            gaussian_generator = GaussianGenerator()
-        
-        scores = []
-        for candidate in candidates:
-            score = self.score(candidate, config, gaussian_generator)
-            scores.append(CandidateScore(candidate=candidate, score=score))
-        
-        return RCVBallot(unsorted_candidates=scores, gaussian_generator=gaussian_generator)

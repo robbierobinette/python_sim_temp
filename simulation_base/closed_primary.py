@@ -5,11 +5,11 @@ from typing import List, Optional
 from dataclasses import dataclass
 from .election_result import ElectionResult, CandidateResult
 from .election_process import ElectionProcess
-from .election_definition import ElectionDefinition
 from .candidate import Candidate
 from .population_tag import DEMOCRATS, REPUBLICANS
 from .simple_plurality import SimplePlurality
 from .plurality_with_runoff import PluralityWithRunoff
+from .ballot import RCVBallot
 
 
 @dataclass
@@ -124,11 +124,12 @@ class ClosedPrimary(ElectionProcess):
         """Name of the election process."""
         return "closedPrimary"
     
-    def run(self, election_def: ElectionDefinition) -> ClosedPrimaryResult:
+    def run(self, candidates: List[Candidate], ballots: List[RCVBallot]) -> ClosedPrimaryResult:
         """Run closed primary election with separate Democratic and Republican primaries.
         
         Args:
-            election_def: Complete election definition with candidates, population, config, etc.
+            candidates: List of candidates in the election
+            ballots: List of ballots from voters
             
         Returns:
             ClosedPrimaryResult with winners from both party primaries
@@ -137,43 +138,55 @@ class ClosedPrimary(ElectionProcess):
             print(f"Running closed primary with runoff: {self.config.use_runoff}")
         
         # Separate voters by party
-        dem_voters = [v for v in election_def.population.voters if v.party.tag == DEMOCRATS]
-        rep_voters = [v for v in election_def.population.voters if v.party.tag == REPUBLICANS]
+        dem_voters = [ballot.voter for ballot in ballots if ballot.voter.party.tag == DEMOCRATS]
+        rep_voters = [ballot.voter for ballot in ballots if ballot.voter.party.tag == REPUBLICANS]
         
         if self.debug:
             print(f"Democratic voters: {len(dem_voters)}, Republican voters: {len(rep_voters)}")
         
-        # Create skewed populations for primaries
-        primary_dem_voters = self._create_skewed_voters(dem_voters, -self.config.primary_skew)
-        primary_rep_voters = self._create_skewed_voters(rep_voters, self.config.primary_skew)
+        # Create skewed populations for primaries if primary_skew > 0
+        if self.config.primary_skew > 0:
+            primary_dem_voters = self._create_skewed_voters(dem_voters, -self.config.primary_skew)
+            primary_rep_voters = self._create_skewed_voters(rep_voters, self.config.primary_skew)
+        else:
+            primary_dem_voters = dem_voters
+            primary_rep_voters = rep_voters
         
         # Filter candidates by party
-        dem_candidates = [c for c in election_def.candidates if c.tag == DEMOCRATS]
-        rep_candidates = [c for c in election_def.candidates if c.tag == REPUBLICANS]
+        dem_candidates = [c for c in candidates if c.tag == DEMOCRATS]
+        rep_candidates = [c for c in candidates if c.tag == REPUBLICANS]
         
         if self.debug:
             print(f"Democratic candidates: {[c.name for c in dem_candidates]}")
             print(f"Republican candidates: {[c.name for c in rep_candidates]}")
         
+        # Create ballots for primaries (skewed if needed)
+        if self.config.primary_skew > 0:
+            # Create new ballots for skewed voters
+            from .ballot import RCVBallot
+            from .election_config import ElectionConfig
+            # Use config from first ballot (assuming all ballots have same config)
+            config = ElectionConfig(uncertainty=0.1)  # Default config
+            dem_ballots = [RCVBallot(voter, dem_candidates, config, ballots[0].gaussian_generator) 
+                          for voter in primary_dem_voters]
+            rep_ballots = [RCVBallot(voter, rep_candidates, config, ballots[0].gaussian_generator) 
+                          for voter in primary_rep_voters]
+        else:
+            # Use original ballots filtered by party
+            dem_ballots = [ballot for ballot in ballots if ballot.voter.party.tag == DEMOCRATS]
+            rep_ballots = [ballot for ballot in ballots if ballot.voter.party.tag == REPUBLICANS]
+        
         # Run Democratic primary
-        dem_primary_result = self._run_party_primary(
-            dem_candidates, primary_dem_voters, 
-            election_def.config, election_def.gaussian_generator,
-            "Democratic"
-        )
+        dem_primary_result = self._run_party_primary(dem_candidates, dem_ballots, "Democratic")
         
         # Run Republican primary
-        rep_primary_result = self._run_party_primary(
-            rep_candidates, primary_rep_voters,
-            election_def.config, election_def.gaussian_generator,
-            "Republican"
-        )
+        rep_primary_result = self._run_party_primary(rep_candidates, rep_ballots, "Republican")
         
         if self.debug:
-            print(f"Democratic primary winner: {dem_primary_result.ordered_results()[0].candidate.name if dem_primary_result.ordered_results() else 'None'}")
-            print(f"Republican primary winner: {rep_primary_result.ordered_results()[0].candidate.name if rep_primary_result.ordered_results() else 'None'}")
+            self._print_debug_results_from_ballots(candidates, dem_primary_result, rep_primary_result, 
+                                                 primary_dem_voters, primary_rep_voters)
         
-        return ClosedPrimaryResult(dem_primary_result, rep_primary_result, election_def.candidates)
+        return ClosedPrimaryResult(dem_primary_result, rep_primary_result, candidates)
     
     def _create_skewed_voters(self, voters: List, skew: float) -> List:
         """Create voters with skewed ideology for primaries."""
@@ -189,8 +202,8 @@ class ClosedPrimary(ElectionProcess):
             skewed_voters.append(skewed_voter)
         return skewed_voters
     
-    def _run_party_primary(self, candidates: List[Candidate], voters: List, 
-                          config, gaussian_generator, party_name: str) -> ElectionResult:
+    def _run_party_primary(self, candidates: List[Candidate], ballots: List[RCVBallot], 
+                          party_name: str) -> ElectionResult:
         """Run a party primary election."""
         if not candidates:
             # Return empty result if no candidates
@@ -200,19 +213,39 @@ class ClosedPrimary(ElectionProcess):
         if len(candidates) == 1:
             # Single candidate automatically wins
             from .simple_plurality import SimplePluralityResult
-            return SimplePluralityResult({candidates[0]: len(voters)}, 0.0)
-        
-        # Generate ballots
-        ballots = []
-        for voter in voters:
-            ballot = voter.ballot(candidates, config, gaussian_generator)
-            ballots.append(ballot)
+            return SimplePluralityResult({candidates[0]: len(ballots)}, 0.0)
         
         if self.config.use_runoff:
             # Use plurality with runoff
             primary_process = PluralityWithRunoff()
-            return primary_process.run_with_ballots(candidates, ballots)
+            return primary_process.run(candidates, ballots)
         else:
             # Use simple plurality
             primary_process = SimplePlurality(debug=self.debug)
-            return primary_process.run_with_ballots(candidates, ballots)
+            return primary_process.run(candidates, ballots)
+    
+    def _print_debug_results_from_ballots(self, candidates: List[Candidate], dem_result: ElectionResult, rep_result: ElectionResult, 
+                                        dem_primary_voters: List, rep_primary_voters: List) -> None:
+        """Print debug information matching ElectionWithPrimary format."""
+        
+        # Calculate population centers
+        dm = sum([v.ideology for v in dem_primary_voters]) / len(dem_primary_voters) if dem_primary_voters else 0.0
+        rm = sum([v.ideology for v in rep_primary_voters]) / len(rep_primary_voters) if rep_primary_voters else 0.0
+
+        # Calculate overall population centers from original voters
+        all_voters = dem_primary_voters + rep_primary_voters
+        dem_mean = sum([v.ideology for v in all_voters if v.party.tag == DEMOCRATS]) / len([v for v in all_voters if v.party.tag == DEMOCRATS]) if any(v.party.tag == DEMOCRATS for v in all_voters) else 0.0
+        rep_mean = sum([v.ideology for v in all_voters if v.party.tag == REPUBLICANS]) / len([v for v in all_voters if v.party.tag == REPUBLICANS]) if any(v.party.tag == REPUBLICANS for v in all_voters) else 0.0
+        median_voter = sum([v.ideology for v in all_voters]) / len(all_voters) if all_voters else 0.0
+
+        print(f"Democratic population center: {dem_mean:.2f} {dm:.2f}")
+        print(f"Republican population center: {rep_mean:.2f} {rm:.2f}")
+        print(f"median voter: {median_voter:.2f}")
+
+        print("Democratic Primary:")
+        for cr in dem_result.ordered_results():
+            print(f"{cr.candidate.name:12s} {cr.candidate.ideology:5.2f} {cr.candidate.quality:5.2f} {cr.votes:8.0f} {cr.candidate.affinity_string()}")
+        
+        print("Republican Primary:")
+        for cr in rep_result.ordered_results():
+            print(f"{cr.candidate.name:12s} {cr.candidate.ideology:5.2f} {cr.candidate.quality:5.2f} {cr.votes:8.0f} {cr.candidate.affinity_string()}")

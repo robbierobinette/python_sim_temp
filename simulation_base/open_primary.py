@@ -1,11 +1,11 @@
 """
 Open primary election implementation.
 """
-from typing import List, Optional, Dict
+from typing import List, Optional
 from dataclasses import dataclass
 from .election_result import ElectionResult, CandidateResult
 from .election_process import ElectionProcess
-from .election_definition import ElectionDefinition
+from .ballot import RCVBallot
 from .candidate import Candidate
 from .population_tag import DEMOCRATS, REPUBLICANS
 from .simple_plurality import SimplePlurality
@@ -130,11 +130,12 @@ class OpenPrimary(ElectionProcess):
         """Name of the election process."""
         return "openPrimary"
     
-    def run(self, election_def: ElectionDefinition) -> OpenPrimaryResult:
+    def run(self, candidates: List[Candidate], ballots: List[RCVBallot]) -> OpenPrimaryResult:
         """Run open primary election where voters choose which primary to vote in.
         
         Args:
-            election_def: Complete election definition with candidates, population, config, etc.
+            candidates: List of candidates in the election
+            ballots: List of ballots from voters
             
         Returns:
             OpenPrimaryResult with winners from both party primaries
@@ -143,24 +144,18 @@ class OpenPrimary(ElectionProcess):
             print(f"Running open primary with runoff: {self.config.use_runoff}")
         
         # Filter candidates by party
-        dem_candidates = [c for c in election_def.candidates if c.tag == DEMOCRATS]
-        rep_candidates = [c for c in election_def.candidates if c.tag == REPUBLICANS]
+        dem_candidates = [c for c in candidates if c.tag == DEMOCRATS]
+        rep_candidates = [c for c in candidates if c.tag == REPUBLICANS]
         
         if self.debug:
             print(f"Democratic candidates: {[c.name for c in dem_candidates]}")
             print(f"Republican candidates: {[c.name for c in rep_candidates]}")
         
-        # Create ballots for all voters
-        all_ballots = []
-        for voter in election_def.population.voters:
-            ballot = voter.ballot(election_def.candidates, election_def.config, election_def.gaussian_generator)
-            all_ballots.append(ballot)
-        
         # Separate ballots by first choice candidate's party
         dem_ballots = []
         rep_ballots = []
         
-        for ballot in all_ballots:
+        for ballot in ballots:
             first_choice = ballot.sorted_candidates[0].candidate
             if first_choice.tag == DEMOCRATS:
                 dem_ballots.append(ballot)
@@ -181,9 +176,9 @@ class OpenPrimary(ElectionProcess):
             print(f"Democratic primary winner: {dem_primary_result.ordered_results()[0].candidate.name if dem_primary_result.ordered_results() else 'None'}")
             print(f"Republican primary winner: {rep_primary_result.ordered_results()[0].candidate.name if rep_primary_result.ordered_results() else 'None'}")
         
-        return OpenPrimaryResult(dem_primary_result, rep_primary_result, election_def.candidates)
+        return OpenPrimaryResult(dem_primary_result, rep_primary_result, candidates)
     
-    def _run_party_primary(self, candidates: List[Candidate], ballots: List, party_name: str) -> ElectionResult:
+    def _run_party_primary(self, candidates: List[Candidate], ballots: List[RCVBallot], party_name: str) -> ElectionResult:
         """Run a party primary election with given ballots."""
         if not candidates:
             # Return empty result if no candidates
@@ -195,11 +190,12 @@ class OpenPrimary(ElectionProcess):
             from .simple_plurality import SimplePluralityResult
             return SimplePluralityResult({candidates[0]: len(ballots)}, 0.0)
         
+        primary_process = None
         if self.config.use_runoff:
             # Use plurality with runoff
-            primary_process = PluralityWithRunoff()
-            return primary_process.run_with_ballots(candidates, ballots)
+            primary_process = PluralityWithRunoff(debug=self.debug)
         else:
             # Use simple plurality
             primary_process = SimplePlurality(debug=self.debug)
-            return primary_process.run_with_ballots(candidates, ballots)
+
+        return primary_process.run(candidates, ballots)
