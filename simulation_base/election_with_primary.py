@@ -82,7 +82,7 @@ class ElectionWithPrimary(ElectionProcess):
             from .ballot import RCVBallot
             from .election_config import ElectionConfig
             # Use config from first ballot (assuming all ballots have same config)
-            config = ElectionConfig(uncertainty=0.1)  # Default config
+            config = ballots[0].config if ballots else ElectionConfig(uncertainty=0.5)
             dem_ballots = [RCVBallot(voter, dem_candidates, config, ballots[0].gaussian_generator) 
                           for voter in primary_dem_voters]
             rep_ballots = [RCVBallot(voter, rep_candidates, config, ballots[0].gaussian_generator) 

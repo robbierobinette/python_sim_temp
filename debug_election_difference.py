@@ -56,7 +56,7 @@ def debug_election_difference():
     )
     
     # Create election config
-    config = ElectionConfig(uncertainty=0.1)
+    config = ElectionConfig(uncertainty=0.5)
     
     # Create seeded gaussian generators for identical results
     seed = 42

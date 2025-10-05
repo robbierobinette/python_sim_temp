@@ -77,8 +77,8 @@ def parse_simulation_args(description: str = "Simulate congressional elections")
     parser.add_argument(
         "--uncertainty", 
         type=float,
-        default=0.1,
-        help="Voter uncertainty factor (default: 0.0)"
+        default=0.5,
+        help="Voter uncertainty factor (default: 0.5)"
     )
     parser.add_argument(
         "--primary-skew", 
@@ -101,7 +101,7 @@ def parse_simulation_args(description: str = "Simulate congressional elections")
     parser.add_argument(
         "--ideology-variance", 
         type=float,
-        default=0.10,
+        default=0.20,
         help="Ideology variance for candidates (default: 0.20)"
     )
     parser.add_argument(

@@ -12,6 +12,7 @@ import argparse
 from typing import List, Any, Dict
 from dataclasses import dataclass
 from simulation_base.ballot import RCVBallot
+from simulation_base.head_to_head_election import HeadToHeadElection
 from simulation_base.simulation_runner import parse_simulation_args
 from simulation_base.unit_population import UnitPopulation
 from simulation_base.election_with_primary import ElectionWithPrimary
@@ -41,22 +42,19 @@ def load_election_types() -> List[Dict[str, Any]]:
         data = json.load(f)
     
     # Extract unique primary types
-    primary_types = set()
-    primary_specs = []
+    primary_types = {}
     for state_data in data.values():
-        key = f"{state_data['primary']}-{state_data['primary_runoff']}-{state_data['general']}-{state_data['general_runoff']}"
+        key = name_from_election_config(state_data)
         if key not in primary_types:
-            primary_types.add(key)
-            primary_specs.append(state_data)
-
+            primary_types[key] = state_data
     
-    return primary_specs
+    return primary_types.values()
 
 
 def create_election_process(election_type: Any) -> Any:
     """Create an election process for the given type."""
     if election_type == "baseline":
-        return ElectionWithPrimary(primary_skew=0.0, debug=True)
+        return ElectionWithPrimary(primary_skew=0.0, debug=False)
     else:
         # Create a composable election with the specific configuration
         return create_composable_election(election_type)
@@ -72,7 +70,7 @@ def create_composable_election(election_config: Dict[str, Any]) -> Any:
     from simulation_base.instant_runoff_election import InstantRunoffElection
     from simulation_base.plurality_with_runoff import PluralityWithRunoff
     
-    debug = True
+    debug = False
 
     # Create primary process
     primary_type = election_config.get("primary", "open-partisan")
@@ -89,6 +87,8 @@ def create_composable_election(election_config: Dict[str, Any]) -> Any:
         primary_process = TopNPrimary(n=2, debug=debug)
     elif primary_type == "top-4":
         primary_process = TopNPrimary(n=4, debug=debug)
+    elif primary_type == "top-5":
+        primary_process = TopNPrimary(n=5, debug=debug)
     elif primary_type == "semi-closed-partisan":
         # For now, treat semi-closed as closed
         config = ClosedPrimaryConfig(use_runoff=primary_runoff)
@@ -109,6 +109,8 @@ def create_composable_election(election_config: Dict[str, Any]) -> Any:
             general_process = SimplePlurality(debug=debug)
     elif general_type == "instant runoff":
         general_process = InstantRunoffElection(debug=debug)
+    elif general_type == "CCV":
+        general_process = HeadToHeadElection(debug=debug)
     else:
         # Default to plurality
         if general_runoff:
@@ -131,15 +133,15 @@ def create_population(partisan_lean: int, seed: int, nvoters: int = 1000) -> Any
     )
 
 
-def create_candidates(population: Any, seed: int, n_candidates: int, ideology_variance: float = 0.4) -> List[Any]:
+def create_candidates(population: Any, seed: int, args: Dict[str, Any]) -> List[Any]:
     """Create candidates for the population."""
     gaussian_generator = GaussianGenerator(seed)
     candidate_generator = NormalPartisanCandidateGenerator(
-        n_partisan_candidates=n_candidates,
-        ideology_variance=ideology_variance,
-        quality_variance=0.05,
-        primary_skew=0.25,
-        median_variance=0.0,
+        n_partisan_candidates=args.candidates,
+        ideology_variance=args.ideology_variance,
+        quality_variance=args.quality_variance,
+        primary_skew=args.primary_skew,
+        median_variance=args.condorcet_variance,
         gaussian_generator=gaussian_generator,
     )
     return candidate_generator.candidates(population)
@@ -177,6 +179,16 @@ def compare_elections(baseline_result: Any, alt_result: Any, partisan_lean: int,
 def create_ballots(voters: List[Any], candidates: List[Any], config: ElectionConfig, gaussian_generator: GaussianGenerator) -> List[RCVBallot]:
     return [RCVBallot(v, candidates, config, gaussian_generator) for v in voters]
 
+def name_from_election_config(election_config: Dict[str, Any]) -> str:
+    """Create a readable name for the election type."""
+    primary_name = election_config['primary']
+    if election_config.get('primary_runoff', False):
+        primary_name += "-R"
+    general_name = election_config['general']
+    if election_config.get('general_runoff', False):
+        general_name += "-R"
+    return f"{primary_name}-{general_name}"
+
 def run_comparison(partisan_lean: int, iteration: int, election_types: List[Dict[str, Any]], 
                   args: argparse.Namespace) -> List[ComparisonResult]:
     """Run comparison for a single partisan lean and iteration."""
@@ -186,7 +198,7 @@ def run_comparison(partisan_lean: int, iteration: int, election_types: List[Dict
     # Create identical population and candidates for all election types
     gaussian_generator = GaussianGenerator(seed)
     population = create_population(partisan_lean, seed, args.nvoters)
-    candidates = create_candidates(population, seed, args.candidates, args.ideology_variance)
+    candidates = create_candidates(population, seed, args)
     config = ElectionConfig(uncertainty=args.uncertainty)
     ballots = create_ballots(population.voters, candidates, config, gaussian_generator)
     
@@ -196,25 +208,15 @@ def run_comparison(partisan_lean: int, iteration: int, election_types: List[Dict
     baseline_process = create_election_process("baseline")
     baseline_result = baseline_process.run(candidates, ballots)
 
-    names_to_test = set([
-        "closed-partisan-plurality",
-    ])
+    # names_to_test = set([ "top-2-plurality", ])
     
     # Run each alternative election type
     for election_config in election_types:
         alt_process = create_election_process(election_config)
         # Create a readable name for the election type
-        primary_name = election_config['primary']
-        if election_config.get('primary_runoff', False):
-            primary_name += "-R"
-        general_name = election_config['general']
-        if election_config.get('general_runoff', False):
-            general_name += "-R"
-        election_type_name = f"{primary_name}-{general_name}"
-
-        if election_type_name not in names_to_test:
-            print(f"Skipping {election_type_name}")
-            continue
+        election_type_name = name_from_election_config(election_config)
+        # if election_type_name not in names_to_test:
+            # continue
         
         alt_result = alt_process.run(candidates, ballots)
         # Compare results
@@ -291,18 +293,14 @@ def main():
     election_types = load_election_types()
     print(f"Found {len(election_types)} unique election types:")
     for i, config in enumerate(election_types):
-        name = f"{config['primary']}-{config['general']}"
-        if config.get('primary_runoff', False):
-            name += "-prunoff"
-        if config.get('general_runoff', False):
-            name += "-grunoff"
+        name = name_from_election_config(config)
         print(f"  {i+1}. {name}")
     
     # Note: baseline is handled separately
     
     # Run comparisons
     all_results = []
-    partisan_leans = list(range(-20, -10, 10))  # -40 to 0 in steps of 5
+    partisan_leans = list(range(-20, 10, 10))  # -40 to 0 in steps of 5
     
     print(f"\nRunning comparisons for partisan leans: {partisan_leans}")
     print(f"Each lean will be tested {10} times with different seeds")
@@ -310,7 +308,7 @@ def main():
     
     for lean in partisan_leans:
         print(f"\nProcessing partisan lean {lean}...")
-        for iteration in range(1):
+        for iteration in range(100):
             if args.verbose:
                 print(f"  Iteration {iteration + 1}/10")
             

@@ -16,8 +16,7 @@ from .ballot import RCVBallot
 class ClosedPrimaryConfig:
     """Configuration for closed primary elections."""
     use_runoff: bool = False
-    runoff_threshold: float = 0.5
-    primary_skew: float = 0.5
+    primary_skew: float = 0.0
 
 
 class ClosedPrimaryResult(ElectionResult):
@@ -215,14 +214,15 @@ class ClosedPrimary(ElectionProcess):
             from .simple_plurality import SimplePluralityResult
             return SimplePluralityResult({candidates[0]: len(ballots)}, 0.0)
         
+        primary_process = None
         if self.config.use_runoff:
             # Use plurality with runoff
-            primary_process = PluralityWithRunoff()
-            return primary_process.run(candidates, ballots)
+            primary_process = PluralityWithRunoff(debug=self.debug)
         else:
             # Use simple plurality
             primary_process = SimplePlurality(debug=self.debug)
-            return primary_process.run(candidates, ballots)
+
+        return primary_process.run(candidates, ballots)
     
     def _print_debug_results_from_ballots(self, candidates: List[Candidate], dem_result: ElectionResult, rep_result: ElectionResult, 
                                         dem_primary_voters: List, rep_primary_voters: List) -> None:
