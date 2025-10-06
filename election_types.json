@@ -1,0 +1,360 @@
+{
+  "Alabama": {
+    "abbr": "AL",
+    "primary": "open-partisan",
+    "primary_runoff": true,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "Alaska": {
+    "abbr": "AK",
+    "primary": "top-4",
+    "primary_runoff": false,
+    "general": "instant runoff",
+    "general_runoff": false
+  },
+  "Arizona": {
+    "abbr": "AZ",
+    "primary": "closed-partisan",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "Arkansas": {
+    "abbr": "AR",
+    "primary": "open-partisan",
+    "primary_runoff": true,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "California": {
+    "abbr": "CA",
+    "primary": "top-2",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "Colorado": {
+    "abbr": "CO",
+    "primary": "open-partisan",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "Connecticut": {
+    "abbr": "CT",
+    "primary": "closed-partisan",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "Delaware": {
+    "abbr": "DE",
+    "primary": "closed-partisan",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "Florida": {
+    "abbr": "FL",
+    "primary": "closed-partisan",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "Georgia": {
+    "abbr": "GA",
+    "primary": "open-partisan",
+    "primary_runoff": true,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "Hawaii": {
+    "abbr": "HI",
+    "primary": "open-partisan",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "Idaho": {
+    "abbr": "ID",
+    "primary": "closed-partisan",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "Illinois": {
+    "abbr": "IL",
+    "primary": "open-partisan",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "Indiana": {
+    "abbr": "IN",
+    "primary": "open-partisan",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "Iowa": {
+    "abbr": "IA",
+    "primary": "closed-partisan",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "Kansas": {
+    "abbr": "KS",
+    "primary": "closed-partisan",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "Kentucky": {
+    "abbr": "KY",
+    "primary": "closed-partisan",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "Louisiana": {
+    "abbr": "LA",
+    "primary": "Louisiana-2",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "Maine": {
+    "abbr": "ME",
+    "primary": "closed-partisan",
+    "primary_runoff": false,
+    "general": "instant runoff",
+    "general_runoff": false
+  },
+  "Maryland": {
+    "abbr": "MD",
+    "primary": "closed-partisan",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "Massachusetts": {
+    "abbr": "MA",
+    "primary": "closed-partisan",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "Michigan": {
+    "abbr": "MI",
+    "primary": "open-partisan",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "Minnesota": {
+    "abbr": "MN",
+    "primary": "open-partisan",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "Mississippi": {
+    "abbr": "MS",
+    "primary": "open-partisan",
+    "primary_runoff": true,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "Missouri": {
+    "abbr": "MO",
+    "primary": "open-partisan",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "Montana": {
+    "abbr": "MT",
+    "primary": "open-partisan",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "Nebraska": {
+    "abbr": "NE",
+    "primary": "closed-partisan",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "Nevada": {
+    "abbr": "NV",
+    "primary": "closed-partisan",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "New Hampshire": {
+    "abbr": "NH",
+    "primary": "closed-partisan",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "New Jersey": {
+    "abbr": "NJ",
+    "primary": "closed-partisan",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "New Mexico": {
+    "abbr": "NM",
+    "primary": "closed-partisan",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "New York": {
+    "abbr": "NY",
+    "primary": "closed-partisan",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "North Carolina": {
+    "abbr": "NC",
+    "primary": "semi-closed-partisan",
+    "primary_runoff": true,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "North Dakota": {
+    "abbr": "ND",
+    "primary": "open-partisan",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "Ohio": {
+    "abbr": "OH",
+    "primary": "open-partisan",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "Oklahoma": {
+    "abbr": "OK",
+    "primary": "closed-partisan",
+    "primary_runoff": true,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "Oregon": {
+    "abbr": "OR",
+    "primary": "closed-partisan",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "Pennsylvania": {
+    "abbr": "PA",
+    "primary": "closed-partisan",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "Rhode Island": {
+    "abbr": "RI",
+    "primary": "closed-partisan",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "South Carolina": {
+    "abbr": "SC",
+    "primary": "open-partisan",
+    "primary_runoff": true,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "South Dakota": {
+    "abbr": "SD",
+    "primary": "closed-partisan",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "Tennessee": {
+    "abbr": "TN",
+    "primary": "open-partisan",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "Texas": {
+    "abbr": "TX",
+    "primary": "open-partisan",
+    "primary_runoff": true,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "Utah": {
+    "abbr": "UT",
+    "primary": "closed-partisan",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "Vermont": {
+    "abbr": "VT",
+    "primary": "open-partisan",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "Virginia": {
+    "abbr": "VA",
+    "primary": "open-partisan",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "Washington": {
+    "abbr": "WA",
+    "primary": "top-2",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "West Virginia": {
+    "abbr": "WV",
+    "primary": "closed-partisan",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "Wisconsin": {
+    "abbr": "WI",
+    "primary": "open-partisan",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+  "Wyoming": {
+    "abbr": "WY",
+    "primary": "closed-partisan",
+    "primary_runoff": false,
+    "general": "plurality",
+    "general_runoff": false
+  },
+
+  "TBD": {
+    "abbr": "XX",
+    "primary": "top-5",
+    "primary_runoff": false,
+    "general": "CCV",
+    "general_runoff": false
+  }
+}

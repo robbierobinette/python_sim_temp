@@ -3,6 +3,5 @@ __pycache__
 .venv
 .vscode
 rcvcore
-*.json
 out
 example_plots
