@@ -21,7 +21,11 @@ class PluralityWithRunoff(ElectionProcess):
     def name(self) -> str:
         """Name of the election process."""
         return "pluralityWithRunoff"
-    
+
+    def voter_satisfaction(self, winner: Candidate, ballots: List[RCVBallot]):
+        left_voter_count = sum(1 for ballot in ballots if ballot.voter.ideology < winner.ideology)
+        return 1 - abs((2.0 * left_voter_count / len(ballots)) - 1) 
+
     def run(self, candidates: List[Candidate], ballots: List[RCVBallot]) -> ElectionResult:
         """Run plurality with runoff election with the given candidates and ballots."""
         # First round: Use SimplePlurality
@@ -35,14 +39,8 @@ class PluralityWithRunoff(ElectionProcess):
             top_candidate_votes = first_round_result.ordered_results()[0].votes
             if (top_candidate_votes / total_votes) > 0.5:
                 # Top candidate has majority, no runoff needed
-                first_round_result._voter_satisfaction = 0.0
+                first_round_result._voter_satisfaction = self.voter_satisfaction(first_round_result.winner(), ballots)
                 return first_round_result
-        
-        # Runoff needed between top two candidates
-        if len(first_round_result.ordered_results()) < 2:
-            # Not enough candidates for runoff, return first round results
-            first_round_result._voter_satisfaction = 0.0
-            return first_round_result
         
         top_candidate = first_round_result.ordered_results()[0].candidate
         second_candidate = first_round_result.ordered_results()[1].candidate
@@ -50,5 +48,5 @@ class PluralityWithRunoff(ElectionProcess):
         # Run runoff between top two candidates using SimplePlurality
         runoff_candidates = [top_candidate, second_candidate]
         runoff_result = self.simple_plurality.run(runoff_candidates, ballots)
-        runoff_result._voter_satisfaction = 0.0
+        runoff_result._voter_satisfaction = self.voter_satisfaction(first_round_result.winner(), ballots)
         return runoff_result

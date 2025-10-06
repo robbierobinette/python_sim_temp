@@ -10,13 +10,7 @@ from .population_tag import DEMOCRATS, REPUBLICANS
 from .simple_plurality import SimplePlurality
 from .plurality_with_runoff import PluralityWithRunoff
 from .ballot import RCVBallot
-
-
-@dataclass
-class ClosedPrimaryConfig:
-    """Configuration for closed primary elections."""
-    use_runoff: bool = False
-    primary_skew: float = 0.0
+from .election_config import ElectionConfig
 
 
 class ClosedPrimaryResult(ElectionResult):
@@ -108,14 +102,15 @@ class ClosedPrimaryResult(ElectionResult):
 class ClosedPrimary(ElectionProcess):
     """Closed primary election process with separate Democratic and Republican primaries."""
     
-    def __init__(self, config: Optional[ClosedPrimaryConfig] = None, debug: bool = False):
+    def __init__(self, use_runoff: bool, primary_skew: float, debug: bool = False):
         """Initialize closed primary election.
         
         Args:
             config: Configuration for the primary (runoff settings, etc.)
             debug: Whether to enable debug output
         """
-        self.config = config or ClosedPrimaryConfig()
+        self.use_runoff = use_runoff
+        self.primary_skew = primary_skew
         self.debug = debug
     
     @property
@@ -134,7 +129,7 @@ class ClosedPrimary(ElectionProcess):
             ClosedPrimaryResult with winners from both party primaries
         """
         if self.debug:
-            print(f"Running closed primary with runoff: {self.config.use_runoff}")
+            print(f"Running closed primary with runoff: {self.use_runoff}")
         
         # Separate voters by party
         dem_voters = [ballot.voter for ballot in ballots if ballot.voter.party.tag == DEMOCRATS]
@@ -144,9 +139,9 @@ class ClosedPrimary(ElectionProcess):
             print(f"Democratic voters: {len(dem_voters)}, Republican voters: {len(rep_voters)}")
         
         # Create skewed populations for primaries if primary_skew > 0
-        if self.config.primary_skew > 0:
-            primary_dem_voters = self._create_skewed_voters(dem_voters, -self.config.primary_skew)
-            primary_rep_voters = self._create_skewed_voters(rep_voters, self.config.primary_skew)
+        if self.primary_skew > 0:
+            primary_dem_voters = self._create_skewed_voters(dem_voters, -self.primary_skew)
+            primary_rep_voters = self._create_skewed_voters(rep_voters, self.primary_skew)
         else:
             primary_dem_voters = dem_voters
             primary_rep_voters = rep_voters
@@ -160,15 +155,14 @@ class ClosedPrimary(ElectionProcess):
             print(f"Republican candidates: {[c.name for c in rep_candidates]}")
         
         # Create ballots for primaries (skewed if needed)
-        if self.config.primary_skew > 0:
+        election_config = ballots[0].config
+        if self.primary_skew > 0:
             # Create new ballots for skewed voters
-            from .ballot import RCVBallot
-            from .election_config import ElectionConfig
             # Use config from first ballot (assuming all ballots have same config)
-            config = ElectionConfig(uncertainty=0.1)  # Default config
-            dem_ballots = [RCVBallot(voter, dem_candidates, config, ballots[0].gaussian_generator) 
+
+            dem_ballots = [RCVBallot(voter, dem_candidates, election_config, ballots[0].gaussian_generator) 
                           for voter in primary_dem_voters]
-            rep_ballots = [RCVBallot(voter, rep_candidates, config, ballots[0].gaussian_generator) 
+            rep_ballots = [RCVBallot(voter, rep_candidates, election_config, ballots[0].gaussian_generator) 
                           for voter in primary_rep_voters]
         else:
             # Use original ballots filtered by party
@@ -194,6 +188,12 @@ class ClosedPrimary(ElectionProcess):
         skewed_voters = []
         for voter in voters:
             # Create new voter with skewed ideology
+            skew = 0
+            if voter.party.tag == REPUBLICANS:
+                skew = self.primary_skew
+            elif voter.party.tag == DEMOCRATS:
+                skew = -self.primary_skew
+
             skewed_voter = Voter(
                 party=voter.party,
                 ideology=voter.ideology + skew
@@ -215,7 +215,7 @@ class ClosedPrimary(ElectionProcess):
             return SimplePluralityResult({candidates[0]: len(ballots)}, 0.0)
         
         primary_process = None
-        if self.config.use_runoff:
+        if self.use_runoff:
             # Use plurality with runoff
             primary_process = PluralityWithRunoff(debug=self.debug)
         else:

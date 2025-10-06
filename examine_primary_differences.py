@@ -18,6 +18,7 @@ from simulation_base.unit_population import UnitPopulation
 from simulation_base.election_with_primary import ElectionWithPrimary
 from simulation_base.election_definition import ElectionDefinition
 from simulation_base.election_config import ElectionConfig
+
 from simulation_base.gaussian_generator import GaussianGenerator
 from simulation_base.candidate_generator import NormalPartisanCandidateGenerator
 
@@ -51,20 +52,20 @@ def load_election_types() -> List[Dict[str, Any]]:
     return primary_types.values()
 
 
-def create_election_process(election_type: Any) -> Any:
+def create_election_process(election_type: Any, args: argparse.Namespace) -> Any:
     """Create an election process for the given type."""
     if election_type == "baseline":
-        return ElectionWithPrimary(primary_skew=0.0, debug=False)
+        return ElectionWithPrimary(primary_skew=args.primary_skew, debug=False)
     else:
         # Create a composable election with the specific configuration
-        return create_composable_election(election_type)
+        return create_composable_election(election_type, args)
 
 
-def create_composable_election(election_config: Dict[str, Any]) -> Any:
+def create_composable_election(election_spec: Dict[str, Any], args: argparse.Namespace) -> Any:
     """Create a composable election from a configuration dictionary."""
     from simulation_base.composable_election import ComposableElection
-    from simulation_base.closed_primary import ClosedPrimary, ClosedPrimaryConfig
-    from simulation_base.open_primary import OpenPrimary, OpenPrimaryConfig
+    from simulation_base.closed_primary import ClosedPrimary
+    from simulation_base.open_primary import OpenPrimary
     from simulation_base.topn_primary import TopNPrimary
     from simulation_base.simple_plurality import SimplePlurality
     from simulation_base.instant_runoff_election import InstantRunoffElection
@@ -73,34 +74,35 @@ def create_composable_election(election_config: Dict[str, Any]) -> Any:
     debug = False
 
     # Create primary process
-    primary_type = election_config.get("primary", "open-partisan")
-    primary_runoff = election_config.get("primary_runoff", debug)
+    primary_type = election_spec.get("primary")
+    primary_runoff = election_spec.get("primary_runoff")
 
     
     if primary_type == "closed-partisan":
-        config = ClosedPrimaryConfig(use_runoff=primary_runoff)
-        primary_process = ClosedPrimary(config=config, debug=debug)
+        primary_process = ClosedPrimary(use_runoff=primary_runoff, primary_skew=args.primary_skew, debug=debug)
     elif primary_type == "open-partisan":
-        config = OpenPrimaryConfig(use_runoff=primary_runoff)
-        primary_process = OpenPrimary(config=config, debug=debug)
+        primary_process = OpenPrimary(use_runoff=primary_runoff, primary_skew=args.primary_skew, debug=debug)
+    elif primary_type == "Louisiana-2":
+        # special case for louisiana where there is no primary, but the general has a runoff.
+        # Very similar to a california top-2 but using a general election electorate for the selection of the
+        # top-2 and a shortcut for a candidate with > 50%.
+        return PluralityWithRunoff(debug=debug)
     elif primary_type == "top-2":
-        primary_process = TopNPrimary(n=2, debug=debug)
+        primary_process = TopNPrimary(n=2, primary_skew=args.primary_skew, debug=debug)
     elif primary_type == "top-4":
-        primary_process = TopNPrimary(n=4, debug=debug)
+        primary_process = TopNPrimary(n=4, primary_skew=args.primary_skew, debug=debug)
     elif primary_type == "top-5":
-        primary_process = TopNPrimary(n=5, debug=debug)
+        primary_process = TopNPrimary(n=5, primary_skew=args.primary_skew, debug=debug)
     elif primary_type == "semi-closed-partisan":
         # For now, treat semi-closed as closed
-        config = ClosedPrimaryConfig(use_runoff=primary_runoff)
-        primary_process = ClosedPrimary(config=config, debug=debug)
+        primary_process = ClosedPrimary(use_runoff=primary_runoff, primary_skew=args.primary_skew, debug=debug)
     else:
         # Default to open-partisan
-        config = OpenPrimaryConfig(use_runoff=primary_runoff)
-        primary_process = OpenPrimary(config=config, debug=debug)
+        primary_process = OpenPrimary(use_runoff=primary_runoff, primary_skew=args.primary_skew, debug=debug)
     
     # Create general process
-    general_type = election_config.get("general", "plurality")
-    general_runoff = election_config.get("general_runoff", debug)
+    general_type = election_spec.get("general")
+    general_runoff = election_spec.get("general_runoff", False)
     
     if general_type == "plurality":
         if general_runoff:
@@ -205,14 +207,14 @@ def run_comparison(partisan_lean: int, iteration: int, election_types: List[Dict
     # Create election config
     
     # Run baseline election
-    baseline_process = create_election_process("baseline")
+    baseline_process = create_election_process("baseline", args)
     baseline_result = baseline_process.run(candidates, ballots)
 
     # names_to_test = set([ "top-2-plurality", ])
     
     # Run each alternative election type
     for election_config in election_types:
-        alt_process = create_election_process(election_config)
+        alt_process = create_election_process(election_config, args)
         # Create a readable name for the election type
         election_type_name = name_from_election_config(election_config)
         # if election_type_name not in names_to_test:

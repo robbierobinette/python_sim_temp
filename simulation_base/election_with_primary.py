@@ -79,10 +79,8 @@ class ElectionWithPrimary(ElectionProcess):
         # Create ballots for primaries (skewed if needed)
         if self.primary_skew > 0:
             # Create new ballots for skewed voters
-            from .ballot import RCVBallot
-            from .election_config import ElectionConfig
             # Use config from first ballot (assuming all ballots have same config)
-            config = ballots[0].config if ballots else ElectionConfig(uncertainty=0.5)
+            config = ballots[0].config
             dem_ballots = [RCVBallot(voter, dem_candidates, config, ballots[0].gaussian_generator) 
                           for voter in primary_dem_voters]
             rep_ballots = [RCVBallot(voter, rep_candidates, config, ballots[0].gaussian_generator) 

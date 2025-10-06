@@ -1,12 +1,16 @@
 """
 Top-N primary election implementation.
 """
-from typing import List
+from typing import List, Optional
+from dataclasses import dataclass
+
+from simulation_base.population_tag import DEMOCRATS, REPUBLICANS
 from .election_result import ElectionResult, CandidateResult
 from .election_process import ElectionProcess
 from .ballot import RCVBallot
 from .candidate import Candidate
 from .simple_plurality import SimplePlurality
+
 
 
 class TopNPrimaryResult(ElectionResult):
@@ -64,14 +68,16 @@ class TopNPrimaryResult(ElectionResult):
 class TopNPrimary(ElectionProcess):
     """Top-N primary election process where all voters vote in the same primary."""
     
-    def __init__(self, n: int = 2, debug: bool = False):
+    def __init__(self, n: int, primary_skew: float, debug: bool = False):
         """Initialize top-N primary election.
         
         Args:
             n: Number of top candidates to advance to general election
+            config: Configuration for the primary (skew settings, etc.)
             debug: Whether to enable debug output
         """
         self.n = n
+        self.primary_skew = primary_skew
         self.debug = debug
     
     @property
@@ -90,13 +96,21 @@ class TopNPrimary(ElectionProcess):
             TopNPrimaryResult with top N candidates advancing to general election
         """
         if self.debug:
-            print(f"Running top-{self.n} primary election")
+            print(f"Running top-{self.n} primary election, skew: {self.config.primary_skew}")
             print(f"All candidates: {[c.name for c in candidates]}")
             print(f"Total ballots: {len(ballots)}")
         
+        # Handle primary skew if needed
+        if self.primary_skew > 0:
+            # Create skewed voters and new ballots for primaries
+            primary_ballots = self._create_skewed_ballots(candidates, ballots)
+        else:
+            # Use original ballots
+            primary_ballots = ballots
+        
         # Run single primary election using simple plurality
         primary_process = SimplePlurality(debug=self.debug)
-        primary_result = primary_process.run(candidates, ballots)
+        primary_result = primary_process.run(candidates, primary_ballots)
         
         if self.debug:
             print("Primary results:")
@@ -107,3 +121,31 @@ class TopNPrimary(ElectionProcess):
             print(f"Top {self.n} candidates advancing: {topn}")
         
         return TopNPrimaryResult(primary_result, candidates, self.n)
+    
+    def _create_skewed_ballots(self, candidates: List[Candidate], ballots: List[RCVBallot]) -> List[RCVBallot]:
+        """Create new ballots with skewed voters for primaries."""
+        from .voter import Voter
+        
+        skewed_ballots = []
+        for ballot in ballots:
+            # Create skewed voter
+            skew = 0
+            if ballot.voter.party.tag == REPUBLICANS:
+                skew = self.primary_skew
+            elif ballot.voter.party.tag == DEMOCRATS:
+                skew = -self.primary_skew
+
+            skewed_voter = Voter(
+                party=ballot.voter.party,
+                ideology=ballot.voter.ideology + skew
+            )
+            # Create new ballot with skewed voter
+            skewed_ballot = RCVBallot(
+                voter=skewed_voter,
+                candidates=candidates,
+                config=ballot.config,
+                gaussian_generator=ballot.gaussian_generator
+            )
+            skewed_ballots.append(skewed_ballot)
+        
+        return skewed_ballots

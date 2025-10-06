@@ -7,16 +7,10 @@ from .election_result import ElectionResult, CandidateResult
 from .election_process import ElectionProcess
 from .ballot import RCVBallot
 from .candidate import Candidate
-from .population_tag import DEMOCRATS, REPUBLICANS
+from .population_tag import DEMOCRATS, REPUBLICANS, INDEPENDENTS
 from .simple_plurality import SimplePlurality
 from .plurality_with_runoff import PluralityWithRunoff
 
-
-@dataclass
-class OpenPrimaryConfig:
-    """Configuration for open primary elections."""
-    use_runoff: bool = False
-    runoff_threshold: float = 0.5
 
 
 class OpenPrimaryResult(ElectionResult):
@@ -115,14 +109,16 @@ class OpenPrimaryResult(ElectionResult):
 class OpenPrimary(ElectionProcess):
     """Open primary election process where voters can vote in any primary."""
     
-    def __init__(self, config: Optional[OpenPrimaryConfig] = None, debug: bool = False):
+    def __init__(self, use_runoff: bool, primary_skew: float, debug: bool = False):
         """Initialize open primary election.
         
         Args:
-            config: Configuration for the primary (runoff settings, etc.)
+            use_runoff: use a runoff
+            primary_skew: skew primary voters to be more partisan.
             debug: Whether to enable debug output
         """
-        self.config = config or OpenPrimaryConfig()
+        self.use_runoff = use_runoff
+        self.primary_skew = primary_skew
         self.debug = debug
     
     @property
@@ -141,7 +137,7 @@ class OpenPrimary(ElectionProcess):
             OpenPrimaryResult with winners from both party primaries
         """
         if self.debug:
-            print(f"Running open primary with runoff: {self.config.use_runoff}")
+            print(f"Running open primary with runoff: {self.use_runoff}, skew: {self.primary_skew}")
         
         # Filter candidates by party
         dem_candidates = [c for c in candidates if c.tag == DEMOCRATS]
@@ -151,11 +147,24 @@ class OpenPrimary(ElectionProcess):
             print(f"Democratic candidates: {[c.name for c in dem_candidates]}")
             print(f"Republican candidates: {[c.name for c in rep_candidates]}")
         
+        # Handle primary skew if needed
+        if self.primary_skew > 0:
+            # Create skewed voters and new ballots for primaries
+            primary_ballots = self._create_skewed_ballots(candidates, ballots)
+        else:
+            # Use original ballots
+            primary_ballots = ballots
+        
         # Separate ballots by first choice candidate's party
         dem_ballots = []
         rep_ballots = []
         
-        for ballot in ballots:
+        gaussian_generator = primary_ballots[0].gaussian_generator
+        for ballot in primary_ballots:
+            # Independents are 10% of the primary electorate, but 23% of the general electorate.
+            # they only have about a 45% chance of voting in the primary.
+            if ballot.voter.party.tag == INDEPENDENTS and gaussian_generator.next_float() > .45:
+                continue
             first_choice = ballot.sorted_candidates[0].candidate
             if first_choice.tag == DEMOCRATS:
                 dem_ballots.append(ballot)
@@ -167,10 +176,10 @@ class OpenPrimary(ElectionProcess):
             print(f"Ballots assigned to Republican primary: {len(rep_ballots)}")
         
         # Run Democratic primary
-        dem_primary_result = self._run_party_primary(dem_candidates, dem_ballots, "Democratic")
+        dem_primary_result = self._run_party_primary(dem_candidates, dem_ballots)
         
         # Run Republican primary
-        rep_primary_result = self._run_party_primary(rep_candidates, rep_ballots, "Republican")
+        rep_primary_result = self._run_party_primary(rep_candidates, rep_ballots)
         
         if self.debug:
             print(f"Democratic primary winner: {dem_primary_result.ordered_results()[0].candidate.name if dem_primary_result.ordered_results() else 'None'}")
@@ -178,7 +187,7 @@ class OpenPrimary(ElectionProcess):
         
         return OpenPrimaryResult(dem_primary_result, rep_primary_result, candidates)
     
-    def _run_party_primary(self, candidates: List[Candidate], ballots: List[RCVBallot], party_name: str) -> ElectionResult:
+    def _run_party_primary(self, candidates: List[Candidate], ballots: List[RCVBallot]) -> ElectionResult:
         """Run a party primary election with given ballots."""
         if not candidates:
             # Return empty result if no candidates
@@ -191,7 +200,7 @@ class OpenPrimary(ElectionProcess):
             return SimplePluralityResult({candidates[0]: len(ballots)}, 0.0)
         
         primary_process = None
-        if self.config.use_runoff:
+        if self.use_runoff:
             # Use plurality with runoff
             primary_process = PluralityWithRunoff(debug=self.debug)
         else:
@@ -199,3 +208,32 @@ class OpenPrimary(ElectionProcess):
             primary_process = SimplePlurality(debug=self.debug)
 
         return primary_process.run(candidates, ballots)
+    
+    def _create_skewed_ballots(self, candidates: List[Candidate], ballots: List[RCVBallot]) -> List[RCVBallot]:
+        """Create new ballots with skewed voters for primaries."""
+        from .ballot import RCVBallot
+        from .voter import Voter
+        
+        skewed_ballots = []
+        for ballot in ballots:
+            # Create skewed voter
+            skew = 0
+            if ballot.voter.party.tag == REPUBLICANS:
+                skew = self.primary_skew
+            elif ballot.voter.party.tag == DEMOCRATS:
+                skew = -self.primary_skew
+
+            skewed_voter = Voter(
+                party=ballot.voter.party,
+                ideology=ballot.voter.ideology + skew
+            )
+            # Create new ballot with skewed voter
+            skewed_ballot = RCVBallot(
+                voter=skewed_voter,
+                candidates=candidates,
+                config=ballot.config,
+                gaussian_generator=ballot.gaussian_generator
+            )
+            skewed_ballots.append(skewed_ballot)
+        
+        return skewed_ballots

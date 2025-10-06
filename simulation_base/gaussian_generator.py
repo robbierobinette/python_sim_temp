@@ -25,6 +25,10 @@ class GaussianGenerator:
         """Generate random integer."""
         return self._random.randint(-2**31, 2**31 - 1)
     
+    def next_float(self) -> float:
+        """Generate random float."""
+        return self._random.random()
+    
     def __call__(self) -> float:
         """Generate Gaussian random number."""
         v = self._random.gauss(0, 1)
