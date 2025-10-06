@@ -4,7 +4,6 @@ Shared simulation runner for common argument parsing and simulation setup.
 import argparse
 import os
 import sys
-from typing import Dict, Any, Optional
 from .simulation_config import CongressionalSimulationConfigFactory
 from .gaussian_generator import GaussianGenerator, set_seed
 
@@ -43,7 +42,7 @@ def parse_simulation_args(description: str = "Simulate congressional elections")
     )
     parser.add_argument(
         "--election-type", 
-        choices=["primary", "irv", "condorcet"],
+        choices=["primary", "irv", "condorcet", "actual"],
         default="primary",
         help="Type of election to run (default: primary)"
     )
@@ -116,12 +115,6 @@ def parse_simulation_args(description: str = "Simulate congressional elections")
         default=0.0,
         help="Quality variance for candidate generation (default: 0.0)"
     )
-    parser.add_argument(
-        "--adjust-for-centrists", 
-        choices=["dominant", "both", "none"],
-        default="dominant",
-        help="Adjust candidates for centrist constraints: 'dominant' (default), 'both', or 'none'"
-    )
     
     return parser
 
@@ -153,8 +146,7 @@ def setup_simulation(args: argparse.Namespace) -> tuple:
         'ideology_variance': args.ideology_variance,
         'spread': args.spread,
         'quality_variance': args.quality_variance,
-        'partisan_shift': args.partisan_shift,
-        'adjust_for_centrists': args.adjust_for_centrists
+        'partisan_shift': args.partisan_shift
     }
     
     config = CongressionalSimulationConfigFactory.create_config(config_params)

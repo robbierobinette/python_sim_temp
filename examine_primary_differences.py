@@ -16,7 +16,6 @@ from simulation_base.head_to_head_election import HeadToHeadElection
 from simulation_base.simulation_runner import parse_simulation_args
 from simulation_base.unit_population import UnitPopulation
 from simulation_base.election_with_primary import ElectionWithPrimary
-from simulation_base.election_definition import ElectionDefinition
 from simulation_base.election_config import ElectionConfig
 
 from simulation_base.gaussian_generator import GaussianGenerator
@@ -35,6 +34,10 @@ class ComparisonResult:
     party_different: bool
     baseline_satisfaction: float
     alt_satisfaction: float
+    baseline_winner_ideology: float
+    alt_winner_ideology: float
+    baseline_winner_name: str
+    alt_winner_name: str
 
 
 def load_election_types() -> List[Dict[str, Any]]:
@@ -175,7 +178,11 @@ def compare_elections(baseline_result: Any, alt_result: Any, partisan_lean: int,
         ideology_diff=ideology_diff,
         party_different=party_different,
         baseline_satisfaction=baseline_result.voter_satisfaction(),
-        alt_satisfaction=alt_result.voter_satisfaction()
+        alt_satisfaction=alt_result.voter_satisfaction(),
+        baseline_winner_ideology=baseline_winner.ideology,
+        alt_winner_ideology=alt_winner.ideology,
+        baseline_winner_name=baseline_winner.name,
+        alt_winner_name=alt_winner.name
     )
 
 def create_ballots(voters: List[Any], candidates: List[Any], config: ElectionConfig, gaussian_generator: GaussianGenerator) -> List[RCVBallot]:
@@ -242,8 +249,8 @@ def generate_summary(all_results: List[ComparisonResult]) -> None:
         by_type[result.election_type].append(result)
     
     # Print header
-    print(f"{'Election Type':<40} {'Winner Diff %':<12} {'Avg Sat':<12} {'Avg Ideo Diff':<12} {'Party Diff %':<12}")
-    print("-" * 120)
+    print(f"{'Election Type':<40} {'Winner Diff %':<12} {'Avg Sat':<12} {'Avg Ideo':<12} {'Party Diff %':<12} {'Candidate Wins':<50}")
+    print("-" * 170)
     
     # Print results for each type
     for election_type in sorted(by_type.keys()):
@@ -251,10 +258,29 @@ def generate_summary(all_results: List[ComparisonResult]) -> None:
         
         winner_diff_pct = sum(1 for r in results if r.winner_different) / len(results) * 100
         avg_satisfaction = sum(r.alt_satisfaction for r in results) / len(results)
-        avg_ideology_diff = sum(r.ideology_diff for r in results) / len(results)
+        avg_ideology = sum(r.alt_winner_ideology for r in results) / len(results)
         party_diff_pct = sum(1 for r in results if r.party_different) / len(results) * 100
         
-        print(f"{election_type:<40} {winner_diff_pct:>10.1f}% {avg_satisfaction:>11.4f} {avg_ideology_diff:>11.4f} {party_diff_pct:>10.1f}%")
+        # Calculate candidate win percentages
+        candidate_wins = {}
+        for result in results:
+            winner_name = result.alt_winner_name
+            if winner_name not in candidate_wins:
+                candidate_wins[winner_name] = 0
+            candidate_wins[winner_name] += 1
+        
+        # Create candidate win string in specified order
+        candidate_order = ['D-2', 'D-1', 'D-V', 'R-V', 'R-1', 'R-2']
+        candidate_parts = []
+        total_wins = sum(candidate_wins.values())
+        
+        for candidate_name in candidate_order:
+            win_pct = candidate_wins.get(candidate_name, 0) / total_wins * 100
+            candidate_parts.append(f"{candidate_name}:{win_pct:4.1f}%")
+        
+        candidate_wins_str = " ".join(candidate_parts)
+        
+        print(f"{election_type:<40} {winner_diff_pct:>10.1f}% {avg_satisfaction:>11.4f} {avg_ideology:>11.4f} {party_diff_pct:>10.1f}%  {candidate_wins_str:<50}")
     
     print("\n" + "="*80)
     print("DETAILED RESULTS BY PARTISAN LEAN")
@@ -272,7 +298,7 @@ def generate_summary(all_results: List[ComparisonResult]) -> None:
     # Print detailed results
     for lean in sorted(by_lean.keys()):
         print(f"\nPartisan Lean: {lean}")
-        print(f"{'Election Type':<40} {'Winner Diff %':<12} {'Avg Sat':<12} {'Avg Ideo Diff':<12}")
+        print(f"{'Election Type':<40} {'Winner Diff %':<12} {'Avg Sat':<12} {'Avg Ideo':<12}")
         print("-" * 60)
         
         for election_type in sorted(by_lean[lean].keys()):
@@ -280,15 +306,24 @@ def generate_summary(all_results: List[ComparisonResult]) -> None:
             
             winner_diff_pct = sum(1 for r in results if r.winner_different) / len(results) * 100
             avg_satisfaction = sum(r.alt_satisfaction for r in results) / len(results)
-            avg_ideology_diff = sum(r.ideology_diff for r in results) / len(results)
+            avg_ideology = sum(r.alt_winner_ideology for r in results) / len(results)
             
-            print(f"{election_type:<40} {winner_diff_pct:>10.1f}% {avg_satisfaction:>11.4f} {avg_ideology_diff:>11.4f}")
+            print(f"{election_type:<40} {winner_diff_pct:>10.1f}% {avg_satisfaction:>11.4f} {avg_ideology:>11.4f}")
+    
 
 
 def main():
     """Main entry point."""
     # Parse arguments
     parser = parse_simulation_args("Examine primary election type differences")
+    
+    # Add custom arguments for this script
+    parser.add_argument("--partisan-leans", type=str, 
+                       default="0,5,10,15,20",
+                       help="Comma-separated list of partisan leans to examine (e.g., '0,5,10,15,20')")
+    parser.add_argument("--iterations", type=int, default=10,
+                       help="Number of iterations to run for each partisan lean (default: 10)")
+    
     args = parser.parse_args()
     
     # Load election types
@@ -300,19 +335,25 @@ def main():
     
     # Note: baseline is handled separately
     
+    # Parse partisan leans
+    try:
+        partisan_leans = [int(x.strip()) for x in args.partisan_leans.split(',')]
+    except ValueError:
+        print("ERROR: Invalid partisan-leans format. Use comma-separated integers (e.g., '-20,-10,0,10,20')")
+        return
+
     # Run comparisons
     all_results = []
-    partisan_leans = list(range(-20, 10, 10))  # -40 to 0 in steps of 5
     
     print(f"\nRunning comparisons for partisan leans: {partisan_leans}")
-    print(f"Each lean will be tested {10} times with different seeds")
-    print(f"Total comparisons: {len(partisan_leans)} leans × {10} iterations × {len(election_types)} types = {len(partisan_leans) * 10 * len(election_types)}")
+    print(f"Each lean will be tested {args.iterations} times with different seeds")
+    print(f"Total comparisons: {len(partisan_leans)} leans × {args.iterations} iterations × {len(election_types)} types = {len(partisan_leans) * args.iterations * len(election_types)}")
     
     for lean in partisan_leans:
         print(f"\nProcessing partisan lean {lean}...")
-        for iteration in range(100):
+        for iteration in range(args.iterations):
             if args.verbose:
-                print(f"  Iteration {iteration + 1}/10")
+                print(f"  Iteration {iteration + 1}/{args.iterations}")
             
             try:
                 results = run_comparison(lean, iteration, election_types, args)

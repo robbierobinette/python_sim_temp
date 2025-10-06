@@ -14,6 +14,8 @@ from simulation_base.head_to_head_election import HeadToHeadElection
 from simulation_base.gaussian_generator import GaussianGenerator
 from simulation_base.election_result import ElectionResult
 from simulation_base.election_process import ElectionProcess
+from simulation_base.actual_custom_election import ActualCustomElection
+from simulation_base.ballot import RCVBallot
 
 
 @dataclass
@@ -92,14 +94,6 @@ class CongressionalSimulation:
         self.gaussian_generator = gaussian_generator or GaussianGenerator()
         self.election_type = election_type
         self.data_file = None  # Will be set when run_simulation is called
-        
-        self.election_process: ElectionProcess
-        if election_type == "primary":
-            self.election_process = ElectionWithPrimary(primary_skew=self.config.primary_skew, debug=False)
-        elif election_type == "condorcet":
-            self.election_process = HeadToHeadElection(debug=False)
-        elif election_type == "irv":    # instant runoff
-            self.election_process = InstantRunoffElection(debug=False)
     
     def load_districts(self, csv_file: str) -> List[DistrictVotingRecord]:
         """Load district data from CSV file."""
@@ -156,29 +150,29 @@ class CongressionalSimulation:
     
     def simulate_district(self, district: DistrictVotingRecord) -> DistrictResult:
         """Simulate election for a single district."""
+        # Create election process based on election type and state
+        if self.election_type == "primary":
+            election_process = ElectionWithPrimary(primary_skew=self.config.primary_skew, debug=False)
+        elif self.election_type == "condorcet":
+            election_process = HeadToHeadElection(debug=False)
+        elif self.election_type == "irv":    # instant runoff
+            election_process = InstantRunoffElection(debug=False)
+        elif self.election_type == "actual":
+            # Use state abbreviation directly from district.state
+            election_process = ActualCustomElection(state_abbr=district.state, primary_skew=self.config.primary_skew, debug=False)
+        else:
+            raise ValueError(f"Unknown election type: {self.election_type}")
+        
         # Generate election definition
         election_def = self.config.generate_definition(district, self.gaussian_generator)
         
-        if self.election_type == "primary":
-            # Run election with primaries
-            result = self.election_process.run(election_def)
-            
-            # Check if median candidate won in primaries and print detailed info
-            if isinstance(result, ElectionWithPrimaryResult):
-                self._check_median_candidate_primaries(district, election_def, result)
-        else:
-            # Generate ballots for direct election
-            ballots = []
-            for voter in election_def.population.voters:
-                ballot = voter.ballot(election_def.candidates, election_def.config, self.gaussian_generator)
-                ballots.append(ballot)
-            
-            # Run direct election
-            result = self.election_process.run_with_voters(
-                election_def.population.voters, 
-                election_def.candidates, 
-                ballots
-            )
+        ballots = []
+        for voter in election_def.population.voters:
+            ballot = RCVBallot(voter, election_def.candidates, election_def.config, self.gaussian_generator)
+            ballots.append(ballot)
+        
+        # Run election
+        result = election_process.run(election_def.candidates, ballots)
         
         # Extract winner information
         winner = result.winner()
