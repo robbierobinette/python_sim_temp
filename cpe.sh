@@ -1,3 +1,7 @@
+#!/bin/bash
+odir="out"
+mkdir -p $odir
+
 for e in primary irv condorcet actual; do
 	skew=0.0
 	candidates=2	
@@ -5,8 +9,6 @@ for e in primary irv condorcet actual; do
 	voters=1000
 	variance=.2
 
-	odir="out"
-	mkdir -p $odir
 
 	echo "skew $skew variance $variance candidates $candidates uncertainty $uncertainty voters $voters" > $odir/parameters
 	python main.py \
@@ -24,10 +26,10 @@ for e in primary irv condorcet actual; do
 done
 wait
 
-for i in out/xx3-v.2/results-* ; do 
+for i in $odir/*.json ; do 
 	python ideology_histogram.py --radius 8 --output ${i/json/png} $i&  
 done
 wait
 
 twin_test.sh
-grep succeeded out-tt/*.out
+grep succeeded $odir/tt/*.out
