@@ -2,7 +2,6 @@
 Open primary election implementation.
 """
 from typing import List, Optional
-from dataclasses import dataclass
 from .election_result import ElectionResult, CandidateResult
 from .election_process import ElectionProcess
 from .ballot import RCVBallot

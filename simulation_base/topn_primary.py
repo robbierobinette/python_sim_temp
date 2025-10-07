@@ -1,8 +1,7 @@
 """
 Top-N primary election implementation.
 """
-from typing import List, Optional
-from dataclasses import dataclass
+from typing import List
 
 from simulation_base.population_tag import DEMOCRATS, REPUBLICANS
 from .election_result import ElectionResult, CandidateResult
