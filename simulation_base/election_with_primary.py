@@ -6,7 +6,6 @@ from .candidate import Candidate
 from .election_result import ElectionResult
 from .population_tag import DEMOCRATS, REPUBLICANS
 from .simple_plurality import SimplePlurality
-from .instant_runoff_election import InstantRunoffElection
 from .voter import Voter
 from .election_result import CandidateResult
 from .ballot import RCVBallot
@@ -141,8 +140,7 @@ class ElectionWithPrimary(ElectionProcess):
     
     def _run_general(self, candidates: List[Candidate], ballots: List[RCVBallot]) -> ElectionResult:
         """Run general election."""
-        # Use instant runoff for general election
-        general_process = InstantRunoffElection(debug=False)
+        general_process = SimplePlurality(debug=False)
         return general_process.run(candidates, ballots)
     
     def _print_debug_results_from_ballots(self, candidates: List[Candidate], dem_result: ElectionResult, rep_result: ElectionResult, 

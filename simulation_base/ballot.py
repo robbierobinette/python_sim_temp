@@ -25,11 +25,11 @@ class RCVBallot:
     gaussian_generator: Optional[GaussianGenerator] = None
     
     def __init__(self, voter: Voter, candidates: List[Candidate], 
-                 config: ElectionConfig, gaussian_generator: Optional[GaussianGenerator] = None):
+                 config: ElectionConfig, gaussian_generator: GaussianGenerator):
         """Initialize ballot with voter and candidates, computing scores internally."""
         self.voter = voter
         self.config = config
-        self.gaussian_generator = gaussian_generator or GaussianGenerator()
+        self.gaussian_generator = gaussian_generator
         
         # Compute scores for all candidates
         scores = []

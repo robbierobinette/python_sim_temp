@@ -1,0 +1,37 @@
+Toxicity Tests for Election Simulations
+==================================================
+=== Running Toxicity Tests ===
+Analyzing 435 districts...
+
+Running toxicity tests...
+
+============================================================
+TOXICITY TEST RESULTS
+============================================================
+
+Toxicity Parameters:
+  Toxic Bonus (own party): +0.25
+  Toxic Penalty (opposition): -1.0
+
+=== NON-TOXIC BASE ELECTIONS ===
+Districts analyzed: 435
+  Toxic success: 423 (97.2%)
+    - Toxic twin wins: 363 (83.4%)
+    - Opposition wins: 28 (6.4%)
+    - Opponent toxic wins: 32 (7.4%)
+  Third candidate wins: 12 (2.8%)
+  Original winner wins: 0 (0.0%)
+
+=== TOXIC BASE ELECTIONS ===
+Districts analyzed: 435
+  Non-toxic success: 0 (0.0%)
+    - Non-toxic twin wins: 0 (0.0%)
+    - Opposition wins: 0 (0.0%)
+  Original winner wins: 435 (100.0%)
+
+=== SUMMARY ===
+  Percentage of toxic success: 97.2%
+  Percentage of non-toxic success: 0.0%
+  Percentage of toxic twin success: 83.4%
+
+Results saved to tt-out/xx/results-irv.json

@@ -42,8 +42,8 @@ DEMOCRATS = PopulationTag(
     hex_color="#0000ff",
     affinity={
         "Rep": 0.0,
-        "Ind": 0.5,
-        "Dem": 1.0
+        "Ind": 0.75,
+        "Dem": 1.5
     }
 )
 
@@ -53,8 +53,8 @@ REPUBLICANS = PopulationTag(
     plural_name="Republicans",
     hex_color="#ff0000",
     affinity={
-        "Rep": 1.0,
-        "Ind": 0.5,
+        "Rep": 1.5,
+        "Ind": 0.75,
         "Dem": 0.0
     }
 )
@@ -66,7 +66,7 @@ INDEPENDENTS = PopulationTag(
     hex_color="#ff00ff",
     affinity={
         "Rep": 0.0,
-        "Ind": 0.5,
+        "Ind": 0.75,
         "Dem": 0.0
     }
 )

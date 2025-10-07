@@ -7,7 +7,7 @@ from .population_tag import DEMOCRATS, REPUBLICANS, INDEPENDENTS
 from .election_definition import ElectionDefinition
 from .gaussian_generator import GaussianGenerator
 from .election_process import ElectionProcess
-
+from .ballot import RCVBallot
 
 class ToxicityAnalyzer:
     """Analyzes the effects of toxic tactics in elections."""
@@ -68,25 +68,24 @@ class ToxicityAnalyzer:
         # Test each losing candidate with toxic tactics
         toxic_success = False
         for candidate in election_def.candidates:
-            if candidate.name != base_winner.name:
-                # Create modified election with this candidate using toxic tactics
-                modified_candidates = [toxic_candidate_map[c.name] if c.name == candidate.name else base_candidate_map[c.name]
-                                    for c in election_def.candidates]
+            # Create modified election with this candidate using toxic tactics
+            modified_candidates = [toxic_candidate_map[c.name] if c.name == candidate.name else base_candidate_map[c.name]
+                                for c in election_def.candidates]
 
-                modified_election_def = ElectionDefinition(
-                    candidates=modified_candidates,
-                    population=election_def.population,
-                    config=election_def.config,
-                    gaussian_generator=election_def.gaussian_generator,
-                    state=election_def.state
-                )
-                
-                # Run election with toxic candidate
-                toxic_result = self._run_election(modified_election_def, election_process, gaussian_generator)
-                
-                if toxic_result.winner().name == candidate.name:
-                    toxic_success = True
-                    break
+            modified_election_def = ElectionDefinition(
+                candidates=modified_candidates,
+                population=election_def.population,
+                config=election_def.config,
+                gaussian_generator=election_def.gaussian_generator,
+                state=election_def.state
+            )
+            
+            # Run election with toxic candidate
+            toxic_result = self._run_election(modified_election_def, election_process, gaussian_generator)
+            
+            if toxic_result.winner().name == candidate.name:
+                toxic_success = True
+                break
         
         return {
             'base_winner': base_winner,
@@ -118,25 +117,23 @@ class ToxicityAnalyzer:
         # Test each losing candidate by removing toxic tactics
         non_toxic_success = False
         for i, candidate in enumerate(election_def.candidates):
-            if candidate.name != toxic_winner.name:
-                # Create modified election with this candidate rejecting toxic tactics
-                modified_candidates = [base_candidate_map[c.name] if c.name == candidate.name else toxic_candidate_map[c.name]
-                                    for c in election_def.candidates]
-                
-                modified_election_def = ElectionDefinition(
-                    candidates=modified_candidates,
-                    population=election_def.population,
-                    config=election_def.config,
-                    gaussian_generator=election_def.gaussian_generator,
-                    state=election_def.state
-                )
-                
-                # Run election with non-toxic candidate
-                non_toxic_result = self._run_election(modified_election_def, election_process, gaussian_generator)
-                
-                if non_toxic_result.winner().name == candidate.name:
-                    non_toxic_success = True
-                    break
+            modified_candidates = [base_candidate_map[c.name] if c.name == candidate.name else toxic_candidate_map[c.name]
+                                for c in election_def.candidates]
+            
+            modified_election_def = ElectionDefinition(
+                candidates=modified_candidates,
+                population=election_def.population,
+                config=election_def.config,
+                gaussian_generator=election_def.gaussian_generator,
+                state=election_def.state
+            )
+            
+            # Run election with non-toxic candidate
+            non_toxic_result = self._run_election(modified_election_def, election_process, gaussian_generator)
+            
+            if non_toxic_result.winner().name == candidate.name:
+                non_toxic_success = True
+                break
         
         return {
             'toxic_winner': toxic_winner,
@@ -148,7 +145,8 @@ class ToxicityAnalyzer:
                      gaussian_generator: GaussianGenerator):
         """Run an election with the given definition and process."""
         # All election processes now implement the ElectionProcess interface
-        return election_process.run(election_def)
+        ballots = [RCVBallot(voter, election_def.candidates, election_def.config, gaussian_generator) for voter in election_def.population.voters]
+        return election_process.run(election_def.candidates, ballots)
     
     def test_twin_scenarios(self, election_def: ElectionDefinition, 
                            election_process: ElectionProcess, gaussian_generator: GaussianGenerator) -> Dict:

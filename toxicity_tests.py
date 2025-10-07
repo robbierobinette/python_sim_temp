@@ -15,6 +15,7 @@ from simulation_base.toxicity_analyzer import ToxicityAnalyzer
 from simulation_base.election_with_primary import ElectionWithPrimary
 from simulation_base.instant_runoff_election import InstantRunoffElection
 from simulation_base.head_to_head_election import HeadToHeadElection
+from simulation_base.actual_custom_election import ActualCustomElection
 from simulation_base.election_process import ElectionProcess
 
 
@@ -46,12 +47,14 @@ def add_toxicity_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParse
     return parser
 
 
-def get_election_process(election_type: str) -> ElectionProcess:
+def get_election_process(state: str, primary_skew: float, election_type: str) -> ElectionProcess:
     """Get the appropriate election process for the given type."""
     if election_type == "primary":
         return ElectionWithPrimary(primary_skew=0, debug=False)
     elif election_type == "condorcet":
         return HeadToHeadElection(debug=False)
+    elif election_type == "actual":
+        return ActualCustomElection(state_abbr=state, primary_skew=primary_skew, debug=False)
     elif election_type == "irv":
         return InstantRunoffElection(debug=False)
     else:
@@ -66,9 +69,6 @@ def run_toxicity_tests(config, gaussian_generator, data_file: str, election_type
     
     # Initialize toxicity analyzer
     analyzer = ToxicityAnalyzer(toxic_bonus, toxic_penalty)
-    
-    # Get election process
-    election_process = get_election_process(election_type)
     
     # Load district data directly
     from congressional_simulation import CongressionalSimulation
@@ -110,58 +110,55 @@ def run_toxicity_tests(config, gaussian_generator, data_file: str, election_type
         if verbose and i % 50 == 0:
             print(f"  Processing district {i+1}/{len(districts)}")
         
-        try:
-            # Generate the election definition for this district
-            election_def = config.generate_definition(district, gaussian_generator)
+        # Generate the election definition for this district
+        election_def = config.generate_definition(district, gaussian_generator)
+        
+        state_abbr = district.state
+        election_process = get_election_process(state_abbr, config.primary_skew, election_type)
+        # Use the comprehensive analysis method
+        analysis = analyzer.analyze_district_toxicity(election_def, election_process, gaussian_generator)
+        
+        # Process non-toxic base scenario results
+        non_toxic_stats['total_districts'] += 1
+        twin_scenario = analysis['twin_scenario']['scenario']
+        
+        # Check if ANY candidate could win by adopting toxic tactics
+        toxic_success = False
+        
+        # Check if toxic twin could win
+        if twin_scenario == 'toxic_success':
+            non_toxic_stats['toxic_twin_wins'] += 1
+            toxic_success = True
+        # Check if toxic opposition could win
+        elif twin_scenario == 'toxic_success_flip':
+            non_toxic_stats['opposition_wins'] += 1
+            toxic_success = True
+        # Check if individual opponents could win with toxic tactics
+        elif analysis.get('toxic_success', False):
+            non_toxic_stats['opponent_toxic_wins'] += 1
+            toxic_success = True
+        elif twin_scenario == 'toxic_failure_flip':
+            non_toxic_stats['third_candidate_wins'] += 1
+        elif twin_scenario == 'toxic_failure':
+            non_toxic_stats['original_winner_wins'] += 1
+        
+        if toxic_success:
+            non_toxic_stats['toxic_success'] += 1
+        
+        # Process toxic base scenario results
+        toxic_stats['total_districts'] += 1
+        toxic_base_analysis = analysis['toxic_base_analysis']
+        
+        # Non-toxic success: either non-toxic twin wins OR opposition wins (rejecting toxic tactics works)
+        if toxic_base_analysis['non_toxic_twin_wins'] or toxic_base_analysis['opposition_wins']:
+            toxic_stats['non_toxic_success'] += 1
+            if toxic_base_analysis['non_toxic_twin_wins']:
+                toxic_stats['non_toxic_twin_wins'] += 1
+            elif toxic_base_analysis['opposition_wins']:
+                toxic_stats['opposition_wins'] += 1
+        else:
+            toxic_stats['original_winner_wins'] += 1
             
-            # Use the comprehensive analysis method
-            analysis = analyzer.analyze_district_toxicity(election_def, election_process, gaussian_generator)
-            
-            # Process non-toxic base scenario results
-            non_toxic_stats['total_districts'] += 1
-            twin_scenario = analysis['twin_scenario']['scenario']
-            
-            # Check if ANY candidate could win by adopting toxic tactics
-            toxic_success = False
-            
-            # Check if toxic twin could win
-            if twin_scenario == 'toxic_success':
-                non_toxic_stats['toxic_twin_wins'] += 1
-                toxic_success = True
-            # Check if toxic opposition could win
-            elif twin_scenario == 'toxic_success_flip':
-                non_toxic_stats['opposition_wins'] += 1
-                toxic_success = True
-            # Check if individual opponents could win with toxic tactics
-            elif analysis.get('toxic_success', False):
-                non_toxic_stats['opponent_toxic_wins'] += 1
-                toxic_success = True
-            elif twin_scenario == 'toxic_failure_flip':
-                non_toxic_stats['third_candidate_wins'] += 1
-            elif twin_scenario == 'toxic_failure':
-                non_toxic_stats['original_winner_wins'] += 1
-            
-            if toxic_success:
-                non_toxic_stats['toxic_success'] += 1
-            
-            # Process toxic base scenario results
-            toxic_stats['total_districts'] += 1
-            toxic_base_analysis = analysis['toxic_base_analysis']
-            
-            # Non-toxic success: either non-toxic twin wins OR opposition wins (rejecting toxic tactics works)
-            if toxic_base_analysis['non_toxic_twin_wins'] or toxic_base_analysis['opposition_wins']:
-                toxic_stats['non_toxic_success'] += 1
-                if toxic_base_analysis['non_toxic_twin_wins']:
-                    toxic_stats['non_toxic_twin_wins'] += 1
-                elif toxic_base_analysis['opposition_wins']:
-                    toxic_stats['opposition_wins'] += 1
-            else:
-                toxic_stats['original_winner_wins'] += 1
-            
-        except Exception as e:
-            if verbose:
-                print(f"  Error processing district {district.district}: {e}")
-            continue
     
     return {
         'non_toxic_stats': non_toxic_stats,

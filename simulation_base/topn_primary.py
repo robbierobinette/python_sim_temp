@@ -95,8 +95,10 @@ class TopNPrimary(ElectionProcess):
             TopNPrimaryResult with top N candidates advancing to general election
         """
         if self.debug:
-            print(f"Running top-{self.n} primary election, skew: {self.config.primary_skew}")
-            print(f"All candidates: {[c.name for c in candidates]}")
+            print(f"Running top-{self.n} primary election, skew: {self.primary_skew}")
+            print("All candidates: ")
+            for c in candidates:
+                print(f"  {c.name:12s} {c.ideology:5.2f} {c.quality:5.2f} {c.affinity_string()}")
             print(f"Total ballots: {len(ballots)}")
         
         # Handle primary skew if needed
