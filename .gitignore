@@ -1,7 +1,43 @@
+# Python
 *.pyc
-__pycache__
-.venv
-.vscode
-rcvcore
-out
-example_plots
+*.pyo
+*.pyd
+__pycache__/
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.Python
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Project specific
+rcvcore/
+out/
+out-tt/
+tt-out/
+example_plots/
+plots/
+*.log
+
+# Test and coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# OS
+.DS_Store
+Thumbs.db

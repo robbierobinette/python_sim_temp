@@ -1,3 +1,8 @@
 # Python dependencies for congressional election simulation
+
+# Core dependencies for visualization
 matplotlib>=3.4.0
 numpy>=1.21.0,<2.0.0
+
+# Testing dependencies (optional - only needed for running tests)
+pytest>=7.0.0

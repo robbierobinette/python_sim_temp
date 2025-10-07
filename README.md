@@ -1,6 +1,60 @@
 # Congressional Election Simulation
 
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+
 This Python implementation simulates elections for all 435 congressional districts using ranked choice voting (instant runoff). It's based on the Scala code in the `rcvcore` directory and uses data from the Cook Political Report.
+
+## Quick Start
+
+### Prerequisites
+
+- Python 3.8 or higher
+- pip (Python package installer)
+
+### Installation
+
+1. **Clone or download this repository**
+   ```bash
+   git clone <repository-url>
+   cd python_election_sim
+   ```
+
+2. **Create a virtual environment** (recommended)
+   ```bash
+   # On macOS/Linux:
+   python3 -m venv venv
+   source venv/bin/activate
+   
+   # On Windows:
+   python -m venv venv
+   venv\Scripts\activate
+   ```
+
+3. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+   
+   Alternatively, for development (includes testing tools):
+   ```bash
+   pip install -e ".[dev]"
+   ```
+
+4. **Run the simulation**
+   ```bash
+   python main.py
+   ```
+
+That's it! The simulation will run and save results to `simulation_results.json`.
+
+### Verifying Installation
+
+To verify everything is working correctly, run the test suite:
+```bash
+pytest tests/
+```
+
+All tests should pass.
 
 ## Structure
 
@@ -65,8 +119,8 @@ Options:
 # Run with specific seed for reproducibility
 python main.py --seed 42
 
-# Run with 5 candidates per party
-python main.py --candidates 5
+# Run with 2 candidates per party
+python main.py --candidates 2
 
 # Verbose output with custom data file
 python main.py --data-file my_districts.csv --verbose
@@ -131,12 +185,82 @@ The simulation uses a single, optimized configuration:
 
 ## Dependencies
 
-- **Core simulation**: No external dependencies required - uses only Python standard library
-- **Visualizations**: Requires matplotlib and numpy for plotting functionality
+The project has minimal dependencies to keep it lightweight:
+
+- **matplotlib** (>=3.4.0) - For generating visualizations
+- **numpy** (>=1.21.0, <2.0.0) - For numerical computations in plots
+- **pytest** (>=7.0.0) - Optional, only needed for running tests
+
+All dependencies are listed in `requirements.txt` and will be installed automatically when you run `pip install -r requirements.txt`.
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue: `ModuleNotFoundError: No module named 'matplotlib'`**
+- **Solution**: Make sure you've activated your virtual environment and installed dependencies:
   ```bash
-  pip install matplotlib numpy
+  source venv/bin/activate  # or venv\Scripts\activate on Windows
+  pip install -r requirements.txt
   ```
+
+**Issue: `FileNotFoundError: [Errno 2] No such file or directory: 'CookPoliticalData.csv'`**
+- **Solution**: Make sure you're running the script from the project root directory where `CookPoliticalData.csv` is located:
+  ```bash
+  cd python_election_sim
+  python main.py
+  ```
+
+**Issue: Tests fail with import errors**
+- **Solution**: Install pytest and make sure the project is in your Python path:
+  ```bash
+  pip install pytest
+  # Run from project root
+  pytest tests/
+  ```
+
+**Issue: Plots don't display**
+- **Solution**: On some systems (especially headless servers or WSL), matplotlib may need a different backend. Either:
+  - Save plots to files instead of displaying: `python main.py --plot-dir output`
+  - Or install a GUI backend for matplotlib (system-dependent)
+
+### Getting Help
+
+If you encounter issues not covered here:
+1. Check that you're using Python 3.8 or higher: `python --version`
+2. Verify all dependencies are installed: `pip list`
+3. Try running the tests to isolate the issue: `pytest tests/ -v`
+
+## Performance
+
+The simulation typically takes:
+- **Basic run** (435 districts): ~10-30 seconds
+- **With visualizations**: ~30-60 seconds
+- Running on a modern CPU with Python 3.9+
+
+Results are deterministic when using the same random seed via `--seed` parameter.
+
+## Project Structure
+
+```
+python_election_sim/
+├── simulation_base/          # Core simulation engine
+│   ├── ballot.py            # Ranked choice ballot implementation
+│   ├── candidate.py         # Candidate representation
+│   ├── voter.py             # Voter behavior
+│   ├── election_*.py        # Various election types
+│   └── ...
+├── tests/                   # Comprehensive test suite
+├── main.py                  # Main entry point
+├── visualization.py         # Plotting utilities
+├── CookPoliticalData.csv    # District data
+├── requirements.txt         # Python dependencies
+├── setup.py                # Package installation script
+└── README.md               # This file
+```
 
 ## Implementation Notes
 
 This Python implementation closely follows the structure and logic of the original Scala code in `rcvcore/`, adapting the object-oriented design to Python idioms while maintaining the same simulation algorithms and parameters.
+
+The simulation uses only Python standard library for core functionality, with matplotlib and numpy required only for visualization features.
