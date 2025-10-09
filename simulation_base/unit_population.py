@@ -41,21 +41,21 @@ class UnitPopulation:
                           stddev: float, skew_factor: float, n_voters: int, seed: Optional[int] = None) -> CombinedPopulation:
         """Create population with specified parameters."""
         return UnitPopulation.create_from_lean(
-            dvr.expected_lean, partisanship, stddev, skew_factor, n_voters, seed
+            dvr, dvr.expected_lean, partisanship, stddev, skew_factor, n_voters, seed
         )
     
     @staticmethod
-    def create_from_lean(lean: float, partisanship: float, stddev: float, 
+    def create_from_lean(dvr: DistrictVotingRecord, lean: float, partisanship: float, stddev: float, 
                         skew_factor: float, n_voters: int, seed: Optional[int] = None) -> CombinedPopulation:
         """Create population from lean value."""
         r_pct = 0.5 + (lean / 2 / 100)
         d_pct = 0.5 - (lean / 2 / 100)
         return UnitPopulation.create_from_percentages(
-            d_pct, r_pct, partisanship, stddev, skew_factor, n_voters, seed
+            dvr, d_pct, r_pct, partisanship, stddev, skew_factor, n_voters, seed
         )
     
     @staticmethod
-    def create_from_percentages(d_pct: float, r_pct: float, partisanship: float,
+    def create_from_percentages(dvr: DistrictVotingRecord, d_pct: float, r_pct: float, partisanship: float,
                                stddev: float, skew_factor: float, n_voters: int, seed: Optional[int] = None) -> CombinedPopulation:
         """Create population from party percentages."""
         i_weight = 0.20
@@ -90,4 +90,4 @@ class UnitPopulation:
             weight=i_weight * 100
         )
         
-        return CombinedPopulation([rep, dem, ind], n_voters, seed)
+        return CombinedPopulation([rep, dem, ind], dvr, n_voters, seed)

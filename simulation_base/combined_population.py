@@ -4,6 +4,8 @@ Combined population representing multiple voter groups.
 from dataclasses import dataclass
 from typing import List, Dict, Optional
 import random
+
+from simulation_base.district_voting_record import DistrictVotingRecord
 from .population_group import PopulationGroup
 from .population_tag import PopulationTag, DEMOCRATS, REPUBLICANS, INDEPENDENTS
 from .voter import Voter
@@ -14,6 +16,7 @@ from .gaussian_generator import GaussianGenerator
 class CombinedPopulation:
     """Combined population of multiple voter groups."""
     populations: List[PopulationGroup]
+    district: DistrictVotingRecord
     desired_samples: int = 1000
     seed: Optional[int] = None
     
@@ -28,6 +31,7 @@ class CombinedPopulation:
         self.sample_population: List[Voter] = self._population_sample(self.desired_samples)
         self.sample_population.sort(key=lambda v: v.ideology)
         self.median_voter: float = self.sample_population[len(self.sample_population) // 2].ideology
+        self._dominant_party: PopulationTag = self.compute_dominant_party()
     
     @property
     def n_samples(self) -> int:
@@ -38,8 +42,12 @@ class CombinedPopulation:
     def voters(self) -> List[Voter]:
         """Get all voters in the population."""
         return self.sample_population
-    
+
     def dominant_party(self) -> PopulationTag:
+        """Get the dominant party in the population."""
+        return self._dominant_party
+    
+    def compute_dominant_party(self) -> PopulationTag:
         """Determine the dominant party in the population."""
         dem_weight = self.democrats.weight
         rep_weight = self.republicans.weight

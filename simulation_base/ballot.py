@@ -19,32 +19,60 @@ class CandidateScore:
 @dataclass
 class RCVBallot:
     """Ranked Choice Voting ballot."""
-    voter: Voter
-    unsorted_candidates: List[CandidateScore]
-    config: ElectionConfig
+    voter: Optional[Voter] = None
+    unsorted_candidates: Optional[List[CandidateScore]] = None
+    config: Optional[ElectionConfig] = None
     gaussian_generator: Optional[GaussianGenerator] = None
     
-    def __init__(self, voter: Voter, candidates: List[Candidate], 
-                 config: ElectionConfig, gaussian_generator: GaussianGenerator):
-        """Initialize ballot with voter and candidates, computing scores internally."""
-        self.voter = voter
-        self.config = config
-        self.gaussian_generator = gaussian_generator
+    def __init__(self, voter: Optional[Voter] = None, candidates: Optional[List[Candidate]] = None, 
+                 config: Optional[ElectionConfig] = None, gaussian_generator: Optional[GaussianGenerator] = None,
+                 unsorted_candidates: Optional[List[CandidateScore]] = None):
+        """Initialize ballot with voter and candidates, or with pre-computed candidate scores.
         
-        # Compute scores for all candidates
-        scores = []
-        for candidate in candidates:
-            score = self._compute_score(candidate, config)
-            scores.append(CandidateScore(candidate=candidate, score=score))
-        
-        self.unsorted_candidates = scores
-        
-        # Sort candidates by score, with random tie-breaking
-        def sort_key(cs: CandidateScore) -> tuple:
-            # Use negative score for descending order, add random for tie-breaking
-            return (-cs.score, self.gaussian_generator.next_boolean())
-        
-        self.sorted_candidates = sorted(self.unsorted_candidates, key=sort_key)
+        Two initialization patterns are supported:
+        1. Production pattern: RCVBallot(voter, candidates, config, gaussian_generator)
+           - Computes scores internally based on voter preferences
+        2. Test pattern: RCVBallot(unsorted_candidates=scores, gaussian_generator=generator)
+           - Uses pre-computed candidate scores
+        """
+        if unsorted_candidates is not None:
+            # Test pattern: use pre-computed scores
+            if gaussian_generator is None:
+                raise ValueError("gaussian_generator is required when using unsorted_candidates")
+            
+            self.unsorted_candidates = unsorted_candidates
+            self.voter = voter
+            self.config = config
+            self.gaussian_generator = gaussian_generator
+            
+            # Sort candidates by score, with random tie-breaking
+            def sort_key(cs: CandidateScore) -> tuple:
+                return (-cs.score, self.gaussian_generator.next_boolean())
+            
+            self.sorted_candidates = sorted(self.unsorted_candidates, key=sort_key)
+        else:
+            # Production pattern: compute scores from voter and candidates
+            if voter is None or candidates is None or config is None or gaussian_generator is None:
+                raise ValueError("Either provide unsorted_candidates, or provide voter, candidates, config, and gaussian_generator")
+            
+            self.voter = voter
+            self.config = config
+            self.gaussian_generator = gaussian_generator
+            
+            # Compute scores for all candidates
+            scores = []
+            for candidate in candidates:
+                score = self._compute_score(candidate, config)
+                scores.append(CandidateScore(candidate=candidate, score=score))
+            
+            self.unsorted_candidates = scores
+            
+            # Sort candidates by score, with random tie-breaking
+            def sort_key(cs: CandidateScore) -> tuple:
+                # Use negative score for descending order, add random for tie-breaking
+                return (-cs.score, self.gaussian_generator.next_boolean())
+            
+            self.sorted_candidates = sorted(self.unsorted_candidates, key=sort_key)
     
     def _compute_score(self, candidate: Candidate, config: ElectionConfig) -> float:
         """Compute total score for a candidate (moved from Voter.score)."""

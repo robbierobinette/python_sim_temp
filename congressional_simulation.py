@@ -91,7 +91,7 @@ class CongressionalSimulation:
             election_type: Type of election ("primary", "irv", "condorcet")
         """
         self.config = config or CongressionalSimulationConfigFactory.create_config(3)
-        self.gaussian_generator = gaussian_generator or GaussianGenerator()
+        self.gaussian_generator = gaussian_generator
         self.election_type = election_type
         self.data_file = None  # Will be set when run_simulation is called
     

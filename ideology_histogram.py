@@ -19,9 +19,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import matplotlib.colors as mcolors
-from typing import List, Dict, Tuple
+from typing import List, Tuple
 from dataclasses import dataclass
-import math
 import argparse
 import sys
 
@@ -44,7 +43,8 @@ class IdeologyHistogram:
                  domain_min: float = None,
                  domain_max: float = None,
                  gradient_min: float = -1.5,
-                 gradient_max: float = 1.5):
+                 gradient_max: float = 1.5,
+                 title: str = "Histogram"):
         """
         Initialize the histogram parameters.
         
@@ -56,6 +56,7 @@ class IdeologyHistogram:
             domain_max: Maximum value (if None, will be calculated from data)
             gradient_min: Minimum value for blue in gradient (default: -1.5)
             gradient_max: Maximum value for red in gradient (default: 1.5)
+            title: Title for the histogram (default: "Histogram")
         """
         self.width = width
         self.height = height
@@ -65,6 +66,7 @@ class IdeologyHistogram:
         self.range = self.domain_max - self.domain_min
         self.gradient_min = gradient_min
         self.gradient_max = gradient_max
+        self.title = title
         
         # Calculate layout parameters similar to TypeScript code
         self.diameter = 2 * self.radius
@@ -189,7 +191,7 @@ class IdeologyHistogram:
         # Remove y-axis tick labels but keep the axis
         ax.set_yticks([])
         ax.set_ylabel('Count', fontsize=12)
-        ax.set_title('Histogram', fontsize=14, fontweight='bold')
+        ax.set_title(self.title, fontsize=14, fontweight='bold')
         
         # No legend needed for gradient coloring
         
@@ -218,7 +220,7 @@ class IdeologyHistogram:
         
         # Print some statistics
         values = [dp.value for dp in data_points]
-        print(f"\nStatistics:")
+        print("\nStatistics:")
         print(f"Total data points: {len(data_points)}")
         print(f"Average value: {np.mean(values):.3f}")
         print(f"Value range: {np.min(values):.3f} to {np.max(values):.3f}")
@@ -231,7 +233,7 @@ class IdeologyHistogram:
                 if dp.label:
                     label_counts[dp.label] = label_counts.get(dp.label, 0) + 1
             
-            print(f"\nLabel breakdown:")
+            print("\nLabel breakdown:")
             for label, count in sorted(label_counts.items()):
                 print(f"{label}: {count} ({count/len(data_points)*100:.1f}%)")
 
@@ -267,13 +269,15 @@ def main():
                        help='Minimum domain value (default: -2.5)')
     parser.add_argument('--max', type=float, default=2.5,
                        help='Maximum domain value (default: 2.5)')
+    parser.add_argument('--title', type=str, default='Histogram',
+                       help='Title for the histogram (default: "Histogram")')
     
     args = parser.parse_args()
     
     print(f"Generating ideology histogram from {args.json_file}...")
     
     # Create histogram generator with custom domain and radius
-    histogram = IdeologyHistogram(radius=args.radius, domain_min=args.min, domain_max=args.max)
+    histogram = IdeologyHistogram(radius=args.radius, domain_min=args.min, domain_max=args.max, title=args.title)
     
     try:
         # Load data from JSON file
@@ -284,7 +288,7 @@ def main():
         data_points = histogram.create_data_points(values, labels)
         
         # Define ideology labels for x-axis
-        ideology_labels = ['Very Liberal', 'Liberal', 'Balanced', 'Conservative', 'Very Conservative']
+        ideology_labels = ['', 'Very Liberal', 'Liberal', 'Balanced', 'Conservative', 'Very Conservative', '']
         
         # Generate histogram
         histogram.create_histogram(data_points, ideology_labels, args.output, args.display)

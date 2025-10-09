@@ -42,13 +42,10 @@ class CongressionalSimulationConfig:
 class UnitSimulationConfig(CongressionalSimulationConfig):
     """Unit simulation configuration."""
     
-    def generate_definition(self, dvr: DistrictVotingRecord, gaussian_generator: Optional[GaussianGenerator] = None):
+    def generate_definition(self, dvr: DistrictVotingRecord, gaussian_generator: GaussianGenerator):
         """Generate election definition for a district."""
         from .unit_population import UnitPopulation
         from .election_definition import ElectionDefinition
-        
-        if gaussian_generator is None:
-            gaussian_generator = GaussianGenerator()
         
         district_pop = UnitPopulation.create_with_params(
             dvr, self.pop_config.partisanship, self.pop_config.stddev, 

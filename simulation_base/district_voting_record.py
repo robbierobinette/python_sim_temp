@@ -36,3 +36,30 @@ class DistrictVotingRecord:
     def __str__(self) -> str:
         """String representation of the district."""
         return f"{self.district:5s} {self.incumbent:30s} {self.lean:6.2f}"
+    
+    @staticmethod
+    def create_dummy(lean: float = 0.0, district_name: str = "TEST-00") -> "DistrictVotingRecord":
+        """Create a dummy district voting record with specified lean.
+        
+        Args:
+            lean: The expected lean of the district (positive = Republican, negative = Democratic)
+            district_name: Name of the district (default: "TEST-00")
+        
+        Returns:
+            A DistrictVotingRecord with appropriate percentages based on the lean
+        """
+        # Convert lean to party percentages
+        # lean = 100 * (0.5 - d_pct / (d_pct + r_pct))
+        # Solve for d_pct and r_pct
+        r_pct = 0.5 + (lean / 200)  # lean/200 because lean is in percentage points
+        d_pct = 0.5 - (lean / 200)
+        
+        return DistrictVotingRecord(
+            district=district_name,
+            incumbent="Test Incumbent",
+            expected_lean=lean,
+            d_pct1=d_pct,
+            r_pct1=r_pct,
+            d_pct2=d_pct,
+            r_pct2=r_pct
+        )

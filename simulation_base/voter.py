@@ -2,7 +2,7 @@
 Voter representation and behavior.
 """
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List
 from .population_group import PopulationGroup
 from .candidate import Candidate
 from .election_config import ElectionConfig
@@ -20,18 +20,13 @@ class Voter:
         return  - abs(self.ideology - candidate.ideology)
     
     def uncertainty(self, config: ElectionConfig, 
-                   gaussian_generator: Optional[GaussianGenerator] = None) -> float:
+                   gaussian_generator: GaussianGenerator) -> float:
         """Calculate uncertainty factor."""
-        if gaussian_generator is None:
-            gaussian_generator = GaussianGenerator()
-        rg = gaussian_generator()
-        return rg * config.uncertainty
+        return gaussian_generator() * config.uncertainty
     
     def score(self, candidate: Candidate, config: ElectionConfig,
-              gaussian_generator: Optional[GaussianGenerator] = None) -> float:
+              gaussian_generator: GaussianGenerator) -> float:
         """Calculate total score for a candidate."""
-        if gaussian_generator is None:
-            gaussian_generator = GaussianGenerator()
         
         return (self.distance_score(candidate) +
                 candidate.affinity(self.party.tag.short_name) +
@@ -39,10 +34,8 @@ class Voter:
                 candidate.quality)
     
     def favorite(self, candidates: List[Candidate], config: ElectionConfig,
-                gaussian_generator: Optional[GaussianGenerator] = None) -> int:
+                gaussian_generator: GaussianGenerator) -> int:
         """Find the index of the favorite candidate."""
-        if gaussian_generator is None:
-            gaussian_generator = GaussianGenerator()
         
         favorite_idx = -1
         favorite_score = -1000.0

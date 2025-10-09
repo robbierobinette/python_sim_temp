@@ -4,7 +4,7 @@ mkdir -p $odir
 
 for e in primary irv condorcet actual; do
 	skew=0.0
-	candidates=2	
+	candidates=3
 	uncertainty=0.5
 	voters=1000
 	variance=.2
@@ -22,6 +22,7 @@ for e in primary irv condorcet actual; do
 		--condorcet-variance .01 \
 		--candidates $candidates  \
 		--primary-skew $skew  \
+		--spread=.2 \
 		--plot-dir $odir/$e  > $odir/$e.out 2>&1 &
 done
 wait

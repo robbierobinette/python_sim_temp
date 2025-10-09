@@ -17,6 +17,7 @@ from simulation_base.combined_population import CombinedPopulation
 from simulation_base.population_group import PopulationGroup
 from simulation_base.election_config import ElectionConfig
 from simulation_base.gaussian_generator import GaussianGenerator
+from simulation_base.district_voting_record import DistrictVotingRecord
 
 def debug_election_difference():
     """Debug the difference between the two election implementations."""
@@ -50,8 +51,10 @@ def debug_election_difference():
         weight=50.0
     )
     
+    dvr = DistrictVotingRecord.create_dummy()
     population = CombinedPopulation(
         populations=[dem_group, rep_group, ind_group],
+        district=dvr,
         desired_samples=350
     )
     

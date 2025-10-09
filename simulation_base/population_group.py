@@ -2,7 +2,7 @@
 Population group representing a segment of voters.
 """
 from dataclasses import dataclass
-from typing import List, Optional, TYPE_CHECKING
+from typing import List, TYPE_CHECKING
 from .population_tag import PopulationTag
 from .candidate import Candidate
 from .gaussian_generator import GaussianGenerator
@@ -81,11 +81,9 @@ class PopulationGroup:
         """Get party bonus for another population group."""
         return self.tag.party_affinity(other.tag)
     
-    def population_sample(self, n_samples: int, gaussian_generator: Optional[GaussianGenerator] = None) -> List['Voter']:
+    def population_sample(self, n_samples: int, gaussian_generator: GaussianGenerator) -> List['Voter']:
         """Generate a sample of voters from this population group."""
         from .voter import Voter
-        if gaussian_generator is None:
-            gaussian_generator = GaussianGenerator()
         voters = []
         for _ in range(n_samples):
             # Generate Gaussian sample
@@ -93,20 +91,16 @@ class PopulationGroup:
             voters.append(Voter(party=self, ideology=sample))
         return voters
     
-    def random_voter(self, gaussian_generator: Optional[GaussianGenerator] = None) -> 'Voter':
+    def random_voter(self, gaussian_generator: GaussianGenerator) -> 'Voter':
         """Generate a random voter from this group."""
         from .voter import Voter
-        if gaussian_generator is None:
-            gaussian_generator = GaussianGenerator()
         ideology = gaussian_generator() * self.stddev + self.mean
         return Voter(party=self, ideology=ideology)
     
     def random_candidate(self, name: str, ideology_stddev: float, 
                         quality_stddev: float,
-                        gaussian_generator: Optional[GaussianGenerator] = None) -> Candidate:
+                        gaussian_generator: GaussianGenerator) -> Candidate:
         """Generate a random candidate from this group."""
-        if gaussian_generator is None:
-            gaussian_generator = GaussianGenerator()
         return Candidate(
             name=name,
             tag=self.tag,
