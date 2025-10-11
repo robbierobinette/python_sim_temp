@@ -4,5 +4,12 @@
 matplotlib>=3.4.0
 numpy>=1.21.0,<2.0.0
 
+# Geospatial dependencies for map visualization
+geopandas>=1.0.0
+pyproj>=3.6.0
+shapely>=2.0.0
+altair>=5.0.0
+vl-convert-python>=1.0.0
+
 # Testing dependencies (optional - only needed for running tests)
 pytest>=7.0.0

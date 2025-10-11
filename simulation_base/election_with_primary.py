@@ -141,8 +141,10 @@ class ElectionWithPrimary(ElectionProcess):
     def _run_general(self, candidates: List[Candidate], ballots: List[RCVBallot]) -> ElectionResult:
         """Run general election."""
         general_process = SimplePlurality(debug=False)
-        return general_process.run(candidates, ballots)
-    
+        result = general_process.run(candidates, ballots)
+        result._voter_satisfaction = self.voter_satisfaction(result.winner(), ballots)
+        return result
+
     def _print_debug_results_from_ballots(self, candidates: List[Candidate], dem_result: ElectionResult, rep_result: ElectionResult, 
                                         dem_primary_voters: List[Voter], rep_primary_voters: List[Voter],
                                         general_result: ElectionResult) -> None:

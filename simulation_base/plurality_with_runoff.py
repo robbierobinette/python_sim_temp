@@ -22,10 +22,6 @@ class PluralityWithRunoff(ElectionProcess):
         """Name of the election process."""
         return "pluralityWithRunoff"
 
-    def voter_satisfaction(self, winner: Candidate, ballots: List[RCVBallot]):
-        left_voter_count = sum(1 for ballot in ballots if ballot.voter.ideology < winner.ideology)
-        return 1 - abs((2.0 * left_voter_count / len(ballots)) - 1) 
-
     def run(self, candidates: List[Candidate], ballots: List[RCVBallot]) -> ElectionResult:
         """Run plurality with runoff election with the given candidates and ballots."""
         # First round: Use SimplePlurality

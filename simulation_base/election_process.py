@@ -30,3 +30,7 @@ class ElectionProcess(ABC):
         """Name of the election process."""
         pass
 
+    def voter_satisfaction(self, winner: Candidate, ballots: List[RCVBallot]):
+        left_voter_count = sum(1 for ballot in ballots if ballot.voter.ideology < winner.ideology)
+        return 1 - abs((2.0 * left_voter_count / len(ballots)) - 1) 
+

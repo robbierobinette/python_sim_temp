@@ -8,6 +8,7 @@ for e in primary irv condorcet actual; do
 	uncertainty=0.5
 	voters=1000
 	variance=.2
+	seed=10
 
 
 	echo "skew $skew variance $variance candidates $candidates uncertainty $uncertainty voters $voters" > $odir/parameters
@@ -15,11 +16,11 @@ for e in primary irv condorcet actual; do
 		--candidate-generator normal-partisan  \
 		--election-type $e \
 		--output $odir/results-$e.json \
-		--seed 42  \
+		--seed $seed  \
 		--nvoters $voters  \
 		--uncertainty $uncertainty  \
 		--ideology-variance $variance  \
-		--condorcet-variance .01 \
+		--condorcet-variance .05 \
 		--candidates $candidates  \
 		--primary-skew $skew  \
 		--spread=.2 \
