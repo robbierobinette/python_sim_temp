@@ -16,6 +16,7 @@ from simulation_base.election_result import ElectionResult
 from simulation_base.election_process import ElectionProcess
 from simulation_base.actual_custom_election import ActualCustomElection
 from simulation_base.ballot import RCVBallot
+from simulation_base.cook_political_data import CookPoliticalData
 
 
 @dataclass
@@ -65,21 +66,6 @@ class CongressionalSimulationResult:
 class CongressionalSimulation:
     """Simulates elections for all 435 congressional districts."""
     
-    # State name to abbreviation mapping
-    STATE_ABBREVIATIONS = {
-        'Alabama': 'AL', 'Alaska': 'AK', 'Arizona': 'AZ', 'Arkansas': 'AR', 'California': 'CA',
-        'Colorado': 'CO', 'Connecticut': 'CT', 'Delaware': 'DE', 'Florida': 'FL', 'Georgia': 'GA',
-        'Hawaii': 'HI', 'Idaho': 'ID', 'Illinois': 'IL', 'Indiana': 'IN', 'Iowa': 'IA',
-        'Kansas': 'KS', 'Kentucky': 'KY', 'Louisiana': 'LA', 'Maine': 'ME', 'Maryland': 'MD',
-        'Massachusetts': 'MA', 'Michigan': 'MI', 'Minnesota': 'MN', 'Mississippi': 'MS', 'Missouri': 'MO',
-        'Montana': 'MT', 'Nebraska': 'NE', 'Nevada': 'NV', 'New Hampshire': 'NH', 'New Jersey': 'NJ',
-        'New Mexico': 'NM', 'New York': 'NY', 'North Carolina': 'NC', 'North Dakota': 'ND', 'Ohio': 'OH',
-        'Oklahoma': 'OK', 'Oregon': 'OR', 'Pennsylvania': 'PA', 'Rhode Island': 'RI', 'South Carolina': 'SC',
-        'South Dakota': 'SD', 'Tennessee': 'TN', 'Texas': 'TX', 'Utah': 'UT', 'Vermont': 'VT',
-        'Virginia': 'VA', 'Washington': 'WA', 'West Virginia': 'WV', 'Wisconsin': 'WI', 'Wyoming': 'WY',
-        'District of Columbia': 'DC'
-    }
-    
     def __init__(self, config: Optional[UnitSimulationConfig] = None, 
                  gaussian_generator: Optional[GaussianGenerator] = None,
                  election_type: str = "primary"):
@@ -97,56 +83,8 @@ class CongressionalSimulation:
     
     def load_districts(self, csv_file: str) -> List[DistrictVotingRecord]:
         """Load district data from CSV file."""
-        districts = []
-        
-        with open(csv_file, 'r', encoding='utf-8-sig') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                # Skip empty rows or rows with empty State
-                if not row.get('State') or not row['State'].strip():
-                    continue
-                
-                # Parse Cook PVI (e.g., "R+27" or "D+5")
-                pvi_str = row['2025 Cook PVI'].strip()
-                if pvi_str.startswith('R+'):
-                    expected_lean = float(pvi_str[2:])
-                elif pvi_str.startswith('D+'):
-                    expected_lean = -float(pvi_str[2:])
-                else:
-                    expected_lean = 0.0
-                
-                # Format district name with state abbreviation and zero-padded number
-                state_name = row['State']
-                state_abbrev = self.STATE_ABBREVIATIONS.get(state_name, state_name[:2].upper())
-                district_number = row['Number']
-                
-                # Handle at-large districts (AL) by converting to 01
-                if district_number.upper() == 'AL':
-                    district_number = '01'
-                else:
-                    # Zero-pad district numbers
-                    try:
-                        district_num = int(district_number)
-                        district_number = f"{district_num:02d}"
-                    except ValueError:
-                        # If not a number, keep as is
-                        pass
-                
-                district_name = f"{state_abbrev}-{district_number}"
-                
-                # Create district record
-                district = DistrictVotingRecord(
-                    district=district_name,
-                    incumbent=row['Member'],
-                    expected_lean=expected_lean,
-                    d_pct1=50.0 - expected_lean / 2,  # Approximate from lean
-                    r_pct1=50.0 + expected_lean / 2,
-                    d_pct2=50.0 - expected_lean / 2,
-                    r_pct2=50.0 + expected_lean / 2
-                )
-                districts.append(district)
-        
-        return districts
+        cook_data = CookPoliticalData(csv_file)
+        return cook_data.load_districts()
     
     def simulate_district(self, district: DistrictVotingRecord) -> DistrictResult:
         """Simulate election for a single district."""
@@ -157,7 +95,7 @@ class CongressionalSimulation:
             election_process = HeadToHeadElection(debug=False)
         elif self.election_type == "irv":    # instant runoff
             election_process = InstantRunoffElection(debug=False)
-        elif self.election_type == "actual":
+        elif self.election_type == "custom":
             # Use state abbreviation directly from district.state
             election_process = ActualCustomElection(state_abbr=district.state, primary_skew=self.config.primary_skew, debug=False)
         else:

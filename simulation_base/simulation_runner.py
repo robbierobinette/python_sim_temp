@@ -42,7 +42,7 @@ def parse_simulation_args(description: str = "Simulate congressional elections")
     )
     parser.add_argument(
         "--election-type", 
-        choices=["primary", "irv", "condorcet", "actual"],
+        choices=["primary", "irv", "condorcet", "custom"],
         default="primary",
         help="Type of election to run (default: primary)"
     )

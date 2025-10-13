@@ -22,79 +22,14 @@ from simulation_base.head_to_head_election import HeadToHeadElection
 from simulation_base.district_voting_record import DistrictVotingRecord
 from simulation_base.ballot import RCVBallot
 from simulation_base.population_tag import PopulationTag
+from simulation_base.cook_political_data import CookPoliticalData
 import csv
 
 
 def load_districts(csv_file: str) -> List[DistrictVotingRecord]:
     """Load district data from CSV file."""
-    # State abbreviations mapping
-    STATE_ABBREVIATIONS = {
-        'Alabama': 'AL', 'Alaska': 'AK', 'Arizona': 'AZ', 'Arkansas': 'AR',
-        'California': 'CA', 'Colorado': 'CO', 'Connecticut': 'CT', 'Delaware': 'DE',
-        'Florida': 'FL', 'Georgia': 'GA', 'Hawaii': 'HI', 'Idaho': 'ID',
-        'Illinois': 'IL', 'Indiana': 'IN', 'Iowa': 'IA', 'Kansas': 'KS',
-        'Kentucky': 'KY', 'Louisiana': 'LA', 'Maine': 'ME', 'Maryland': 'MD',
-        'Massachusetts': 'MA', 'Michigan': 'MI', 'Minnesota': 'MN', 'Mississippi': 'MS',
-        'Missouri': 'MO', 'Montana': 'MT', 'Nebraska': 'NE', 'Nevada': 'NV',
-        'New Hampshire': 'NH', 'New Jersey': 'NJ', 'New Mexico': 'NM', 'New York': 'NY',
-        'North Carolina': 'NC', 'North Dakota': 'ND', 'Ohio': 'OH', 'Oklahoma': 'OK',
-        'Oregon': 'OR', 'Pennsylvania': 'PA', 'Rhode Island': 'RI', 'South Carolina': 'SC',
-        'South Dakota': 'SD', 'Tennessee': 'TN', 'Texas': 'TX', 'Utah': 'UT',
-        'Vermont': 'VT', 'Virginia': 'VA', 'Washington': 'WA', 'West Virginia': 'WV',
-        'Wisconsin': 'WI', 'Wyoming': 'WY'
-    }
-    
-    districts = []
-    
-    with open(csv_file, 'r', encoding='utf-8-sig') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            # Skip empty rows or rows with empty State
-            if not row.get('State') or not row['State'].strip():
-                continue
-            
-            # Parse Cook PVI (e.g., "R+27" or "D+5")
-            pvi_str = row['2025 Cook PVI'].strip()
-            if pvi_str.startswith('R+'):
-                expected_lean = float(pvi_str[2:])
-            elif pvi_str.startswith('D+'):
-                expected_lean = -float(pvi_str[2:])
-            else:
-                expected_lean = 0.0
-            
-            # Format district name with state abbreviation and zero-padded number
-            state_name = row['State']
-            state_abbrev = STATE_ABBREVIATIONS.get(state_name, state_name[:2].upper())
-            district_number = row['Number']
-            
-            # Handle at-large districts (AL) by converting to 01
-            if district_number.upper() == 'AL':
-                district_number = '01'
-            else:
-                # Zero-pad district numbers
-                try:
-                    district_num = int(district_number)
-                    district_number = f"{district_num:02d}"
-                except ValueError:
-                    # If not a number, keep as is
-                    pass
-            
-            district_name = f"{state_abbrev}-{district_number}"
-            
-            # Create district record
-            district = DistrictVotingRecord(
-                district=district_name,
-                incumbent=row.get('Incumbent', ''),
-                expected_lean=expected_lean,
-                d_pct1=float(row.get('D%', 0)),
-                r_pct1=float(row.get('R%', 0)),
-                d_pct2=float(row.get('D%', 0)),
-                r_pct2=float(row.get('R%', 0))
-            )
-            
-            districts.append(district)
-    
-    return districts
+    cook_data = CookPoliticalData(csv_file)
+    return cook_data.load_districts()
 
 
 def get_opposition_party(party_tag: PopulationTag) -> PopulationTag:
@@ -300,7 +235,7 @@ def create_election_process(election_type: str, district: DistrictVotingRecord, 
     elif election_type == 'top2':
         # use california as the state for the top-2 election
         return ActualCustomElection(state_abbr='CA', primary_skew=primary_skew, debug=True)
-    elif election_type == 'actual':
+    elif election_type == 'custom':
         return ActualCustomElection(state_abbr=district.state, primary_skew=primary_skew, debug=False)
     else:
         raise ValueError(f"Unknown election type: {election_type}")
@@ -319,7 +254,7 @@ def main():
                        help='Enable verbose output')
     
     # Election configuration
-    parser.add_argument('--election-type', choices=['primary', 'irv', 'condorcet', 'actual', 'top2'],
+    parser.add_argument('--election-type', choices=['primary', 'irv', 'condorcet', 'custom', 'top2'],
                        default='primary',
                        help='Type of election to run')
     parser.add_argument('--primary-skew', type=float, default=0.0,

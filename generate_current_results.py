@@ -21,17 +21,15 @@ Output:
 import csv
 import json
 import sys
-from typing import List, Dict, Optional
+import argparse
+import traceback
+from typing import List, Dict
 from dataclasses import dataclass, asdict
 
 # Import simulation modules
-from simulation_base.district_voting_record import DistrictVotingRecord
 from simulation_base.unit_population import UnitPopulation
 from simulation_base.combined_population import CombinedPopulation
-from simulation_base.population_group import PopulationGroup
-from simulation_base.population_tag import DEMOCRATS, REPUBLICANS, INDEPENDENTS
-from simulation_base.candidate import Candidate
-from simulation_base.voter import Voter
+from simulation_base.cook_political_data import CookPoliticalData
 
 
 @dataclass
@@ -44,6 +42,7 @@ class DistrictResult:
     winner_name: str
     winner_party: str
     winner_ideology: float
+    nominate_dim1: float  # DW-NOMINATE first dimension score
     voter_satisfaction: float
     total_votes: float
     margin: float  # Winner's margin over second place
@@ -89,63 +88,15 @@ def map_party_code(party_code: str) -> str:
     return party_map.get(party_code, 'Other')
 
 
-def create_district_voting_record(member: Dict) -> DistrictVotingRecord:
-    """Create a DistrictVotingRecord from member data."""
-    state_abbrev = member['state_abbrev']
-    district_code = member['district_code']
-    
-    # Create district identifier
-    if district_code == '0':
-        district = f"{state_abbrev}-AL"  # At-large
-    else:
-        district = f"{state_abbrev}-{district_code.zfill(2)}"
-    
-    # Use member name as incumbent
-    incumbent = member['bioname']
-    
-    # Estimate expected lean based on member's ideology
-    # More conservative members (positive nominate_dim1) suggest more Republican-leaning districts
-    nominate_dim1 = float(member['nominate_dim1'])
-    expected_lean = nominate_dim1 * 30.0  # Scale to reasonable lean range
-    
-    # Estimate party percentages based on lean
-    lean_factor = expected_lean / 100.0
-    d_pct = 50.0 - lean_factor * 25.0  # Democratic percentage
-    r_pct = 50.0 + lean_factor * 25.0   # Republican percentage
-    
-    return DistrictVotingRecord(
-        district=district,
-        incumbent=incumbent,
-        expected_lean=expected_lean,
-        d_pct1=max(10.0, min(90.0, d_pct)),  # Clamp between 10% and 90%
-        r_pct1=max(10.0, min(90.0, r_pct)),
-        d_pct2=max(10.0, min(90.0, d_pct)),
-        r_pct2=max(10.0, min(90.0, r_pct))
-    )
-
 
 def calculate_voter_satisfaction(member: Dict, population: CombinedPopulation) -> float:
     """Calculate voter satisfaction for a member based on their ideology and district population."""
     # Get member ideology (nominate_dim1 scaled by 3)
     nominate_dim1 = float(member['nominate_dim1'])
-    member_ideology = nominate_dim1 * 3.0  # Scale from [-1,1] to [-3,3]
-    
-    # Create a candidate representing the actual member
-    party_code = member['party_code']
-    party_tag = DEMOCRATS if party_code == '100' else REPUBLICANS if party_code == '200' else INDEPENDENTS
-    
-    candidate = Candidate(
-        name=member['bioname'],
-        tag=party_tag,
-        ideology=member_ideology,
-        quality=0.0,  # No quality adjustment for actual members
-        incumbent=True
-    )
-    
+    member_ideology = nominate_dim1 * 2.0  # Scale from [-1,1] to [-2.0, 2.0]
+
     # Calculate satisfaction based on how well the member represents the district
     voters = population.voters
-    if not voters:
-        return 0.5  # Default satisfaction if no voters
     
     # Count voters on each side of the member's ideology
     left_voter_count = sum(1 for v in voters if v.ideology < member_ideology)
@@ -157,17 +108,38 @@ def calculate_voter_satisfaction(member: Dict, population: CombinedPopulation) -
     
     return satisfaction
 
-
 def generate_actual_results(members: List[Dict]) -> CongressionalSimulationResult:
     """Generate simulation results from actual congressional data."""
     district_results = []
     democratic_wins = 0
     republican_wins = 0
     other_wins = 0
+
+    # Load districts from CookPoliticalData.csv
+    cook_data = CookPoliticalData("CookPoliticalData.csv")
+    dvr_map = cook_data.get_districts_dict()
     
     for member in members:
-        # Create district voting record
-        dvr = create_district_voting_record(member)
+        # Format district name to match the format used in load_districts
+        state_abbrev = member['state_abbrev']
+        district_code = member['district_code']
+        
+        # Format district identifier (e.g., "CA-15" or "AK-01" for at-large)
+        # Convert district_code to string if it's not already
+        district_code_str = str(district_code)
+        
+        if district_code_str == '0':
+            district_name = f"{state_abbrev}-01"  # At-large districts are represented as 01
+        else:
+            district_num = int(district_code_str)
+            district_name = f"{state_abbrev}-{district_num:02d}"
+        
+        # Get the district voting record
+        if district_name not in dvr_map:
+            print(f"Warning: District {district_name} not found in Cook Political Data, skipping {member['bioname']}")
+            continue
+            
+        dvr = dvr_map[district_name]
         
         # Create population for this district
         population = UnitPopulation.create(dvr, n_voters=1000)
@@ -189,7 +161,7 @@ def generate_actual_results(members: List[Dict]) -> CongressionalSimulationResul
         
         # Create district result
         nominate_dim1 = float(member['nominate_dim1'])
-        member_ideology = nominate_dim1 * 3.0
+        member_ideology = nominate_dim1 * 2.0  # Scale from [-1,1] to [-2.5, 2.5]
         
         district_result = DistrictResult(
             district=dvr.district,
@@ -199,6 +171,7 @@ def generate_actual_results(members: List[Dict]) -> CongressionalSimulationResul
             winner_name=member['bioname'],
             winner_party=winner_party,
             winner_ideology=member_ideology,
+            nominate_dim1=nominate_dim1,
             voter_satisfaction=satisfaction,
             total_votes=10000.0,  # Default total votes
             margin=1000.0  # Default margin
@@ -207,7 +180,7 @@ def generate_actual_results(members: List[Dict]) -> CongressionalSimulationResul
         district_results.append(district_result)
     
     return CongressionalSimulationResult(
-        config_label="actualCongress119",
+        config_label="Congress119",
         total_districts=len(district_results),
         democratic_wins=democratic_wins,
         republican_wins=republican_wins,
@@ -217,8 +190,17 @@ def generate_actual_results(members: List[Dict]) -> CongressionalSimulationResul
 
 
 def main():
-    """Main function to generate results-actual.json."""
-    print("Generating results-actual.json from HSall_members.csv...")
+    """Main function to generate results-current.json."""
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Generate results from HSall_members.csv')
+    parser.add_argument(
+        '-o', '--output',
+        default='./results-current.json',
+        help='Output file path (default: ./results-current.json)'
+    )
+    args = parser.parse_args()
+    
+    print(f"Generating {args.output} from HSall_members.csv...")
     
     # Parse the CSV file
     try:
@@ -239,10 +221,10 @@ def main():
         results_dict = asdict(results)
         
         # Write to JSON file
-        with open('results-actual.json', 'w') as f:
+        with open(args.output, 'w') as f:
             json.dump(results_dict, f, indent=2)
         
-        print(f"Results written to results-actual.json")
+        print(f"Results written to {args.output}")
         print(f"Total districts: {results.total_districts}")
         print(f"Democratic wins: {results.democratic_wins}")
         print(f"Republican wins: {results.republican_wins}")
@@ -254,6 +236,7 @@ def main():
         
     except Exception as e:
         print(f"Error generating results: {e}")
+        traceback.print_exc()
         sys.exit(1)
 
 

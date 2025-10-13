@@ -53,7 +53,7 @@ def get_election_process(state: str, primary_skew: float, election_type: str) ->
         return ElectionWithPrimary(primary_skew=0, debug=False)
     elif election_type == "condorcet":
         return HeadToHeadElection(debug=False)
-    elif election_type == "actual":
+    elif election_type == "custom":
         return ActualCustomElection(state_abbr=state, primary_skew=primary_skew, debug=False)
     elif election_type == "irv":
         return InstantRunoffElection(debug=False)

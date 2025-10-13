@@ -2,7 +2,10 @@
 odir="out"
 mkdir -p $odir
 
-for e in primary irv condorcet actual; do
+
+python generate_current_results.py --output out/results-current.json
+
+for e in primary irv condorcet custom; do
 	skew=0.0
 	candidates=3
 	uncertainty=0.5
@@ -28,10 +31,7 @@ for e in primary irv condorcet actual; do
 done
 wait
 
-for i in $odir/*.json ; do 
-	python ideology_histogram.py --radius 8 --output ${i/json/png} $i&  
-done
-wait
+make_plots.sh
 
 twin_test.sh
 grep succeeded $odir/tt/*.out
