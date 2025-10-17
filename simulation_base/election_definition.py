@@ -17,3 +17,5 @@ class ElectionDefinition:
     config: ElectionConfig
     gaussian_generator: GaussianGenerator
     state: str
+    def district(self) -> str:
+        return self.population.district.district

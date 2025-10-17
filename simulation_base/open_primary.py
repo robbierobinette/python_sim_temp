@@ -14,6 +14,13 @@ from .plurality_with_runoff import PluralityWithRunoff
 
 class OpenPrimaryResult(ElectionResult):
     """Result of an open primary election with cross-party voting."""
+    def print_details(self):
+        """Print details of the open primary result."""
+        print("Open primary result:")
+        print("Democratic primary:")
+        self.democratic_primary.print_details()
+        print("Republican primary:")
+        self.republican_primary.print_details()
     
     def __init__(self, democratic_primary: ElectionResult, republican_primary: ElectionResult, 
                  all_candidates: List[Candidate]):

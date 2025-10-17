@@ -2,16 +2,17 @@
 odir="out"
 mkdir -p $odir
 
+. .venv/bin/activate
 
 python generate_current_results.py --output out/results-current.json
 
 for e in primary irv condorcet custom; do
 	skew=0.0
-	candidates=3
+	candidates=2
 	uncertainty=0.5
 	voters=1000
 	variance=.2
-	seed=10
+	seed=1
 
 
 	echo "skew $skew variance $variance candidates $candidates uncertainty $uncertainty voters $voters" > $odir/parameters
@@ -32,6 +33,6 @@ done
 wait
 
 make_plots.sh
-
 twin_test.sh
-grep succeeded $odir/tt/*.out
+maps.sh
+grep All $odir/tt/*.out

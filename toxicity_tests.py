@@ -14,7 +14,7 @@ from simulation_base.simulation_runner import parse_simulation_args, setup_simul
 from simulation_base.toxicity_analyzer import ToxicityAnalyzer
 from simulation_base.election_with_primary import ElectionWithPrimary
 from simulation_base.instant_runoff_election import InstantRunoffElection
-from simulation_base.head_to_head_election import HeadToHeadElection
+from simulation_base.condorcet_election import CondorcetElection
 from simulation_base.actual_custom_election import ActualCustomElection
 from simulation_base.election_process import ElectionProcess
 
@@ -52,7 +52,7 @@ def get_election_process(state: str, primary_skew: float, election_type: str) ->
     if election_type == "primary":
         return ElectionWithPrimary(primary_skew=0, debug=False)
     elif election_type == "condorcet":
-        return HeadToHeadElection(debug=False)
+        return CondorcetElection(debug=False)
     elif election_type == "custom":
         return ActualCustomElection(state_abbr=state, primary_skew=primary_skew, debug=False)
     elif election_type == "irv":

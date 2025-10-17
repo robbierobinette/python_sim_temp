@@ -16,6 +16,9 @@ class ToxicityAnalyzer:
         """Initialize toxicity analyzer."""
         self.toxic_bonus = toxic_bonus
         self.toxic_penalty = toxic_penalty
+
+    def remove_balanced_candidates(self, candidates: List[Candidate]) -> List[Candidate]:
+        return [c for c in candidates if c.name[1:] != "-V"]
     
     def apply_toxic_tactics(self, candidate: Candidate) -> Candidate:
         """Apply toxic tactics to a candidate's affinity map."""
@@ -23,18 +26,15 @@ class ToxicityAnalyzer:
         new_affinity = candidate._affinity_map.copy()
         
         # Apply toxic bonus to own party
-        own_party_short = candidate.tag.short_name
-        if own_party_short in new_affinity:
-            new_affinity[own_party_short] += self.toxic_bonus
+        new_affinity[candidate.tag.short_name] += self.toxic_bonus
         
         # Apply toxic penalty to opposition party
         opposition_party = self._get_opposition_party(candidate.tag)
-        if opposition_party.short_name in new_affinity:
-            new_affinity[opposition_party.short_name] += self.toxic_penalty
+        new_affinity[opposition_party.short_name] += self.toxic_penalty
         
         # Create new candidate with toxic affinity
         toxic_candidate = Candidate(
-            name=candidate.name,
+            name=candidate.name + "-toxic",
             tag=candidate.tag,
             ideology=candidate.ideology,
             quality=candidate.quality,
@@ -62,15 +62,17 @@ class ToxicityAnalyzer:
         base_winner = base_result.winner()
         
         toxic_candidates = [self.apply_toxic_tactics(c) for c in election_def.candidates]
-        toxic_candidate_map = {c.name:c for c in toxic_candidates}
-        base_candidate_map = {c.name:c for c in election_def.candidates}
         
         # Test each losing candidate with toxic tactics
         toxic_success = False
-        for candidate in election_def.candidates:
+        toxic_winner = None
+        for i, candidate in enumerate(election_def.candidates):
             # Create modified election with this candidate using toxic tactics
-            modified_candidates = [toxic_candidate_map[c.name] if c.name == candidate.name else base_candidate_map[c.name]
-                                for c in election_def.candidates]
+            modified_candidates = election_def.candidates.copy()
+            if base_winner.name == candidate.name:
+                modified_candidates.append(toxic_candidates[i])
+            else:
+                modified_candidates[i] = toxic_candidates[i]
 
             modified_election_def = ElectionDefinition(
                 candidates=modified_candidates,
@@ -83,14 +85,15 @@ class ToxicityAnalyzer:
             # Run election with toxic candidate
             toxic_result = self._run_election(modified_election_def, election_process, gaussian_generator)
             
-            if toxic_result.winner().name == candidate.name:
+            if toxic_result.winner().name == toxic_candidates[i].name:
                 toxic_success = True
+                toxic_winner = toxic_result.winner()
                 break
         
         return {
             'base_winner': base_winner,
             'toxic_success': toxic_success,
-            'total_candidates': len(election_def.candidates)
+            'toxic_winner': toxic_winner
         }
     
     def test_non_toxic_scenarios(self, election_def: ElectionDefinition,
@@ -98,6 +101,7 @@ class ToxicityAnalyzer:
         """Test if losing candidates could win by rejecting toxic tactics."""
         # Create toxic base election (all candidates use toxic tactics)
         toxic_candidates = [self.apply_toxic_tactics(c) for c in election_def.candidates]
+
         toxic_election_def = ElectionDefinition(
             candidates=toxic_candidates,
             population=election_def.population,
@@ -105,23 +109,28 @@ class ToxicityAnalyzer:
             gaussian_generator=election_def.gaussian_generator,
             state=election_def.state
         )
-
         
         # Run toxic base election
         toxic_result = self._run_election(toxic_election_def, election_process, gaussian_generator)
         toxic_winner = toxic_result.winner()
         
-        toxic_candidate_map = {c.name:c for c in toxic_candidates}
-        base_candidate_map = {c.name:c for c in election_def.candidates}
 
         # Test each losing candidate by removing toxic tactics
         non_toxic_success = False
         for i, candidate in enumerate(election_def.candidates):
-            modified_candidates = [base_candidate_map[c.name] if c.name == candidate.name else toxic_candidate_map[c.name]
-                                for c in election_def.candidates]
+
+            # skip the original winner, they may be the only viable candidate.
+            if toxic_winner.name == toxic_candidates[i].name:
+                continue
+
+            # try replace each candidate with
+            # a non-toxic candidate
+            new_candidates = toxic_candidates.copy()
+            new_candidates[i] = candidate
+            
             
             modified_election_def = ElectionDefinition(
-                candidates=modified_candidates,
+                candidates=new_candidates,
                 population=election_def.population,
                 config=election_def.config,
                 gaussian_generator=election_def.gaussian_generator,
@@ -132,6 +141,14 @@ class ToxicityAnalyzer:
             non_toxic_result = self._run_election(modified_election_def, election_process, gaussian_generator)
             
             if non_toxic_result.winner().name == candidate.name:
+                print(  f"Non-toxic success in district {election_def.state}-{election_def.district()} " + 
+                        f"lean {election_def.population.district.lean:.1f} " +
+                        f"toxic winner {toxic_winner.name} " +
+                        f"non-toxic winner {candidate.name} ")
+                print("general election votes:")
+                for cs in non_toxic_result.ordered_results():
+                    print(f"  {cs.candidate.name}: {cs.votes}")
+
                 non_toxic_success = True
                 break
         
@@ -239,7 +256,9 @@ class ToxicityAnalyzer:
     def analyze_district_toxicity(self, election_def: ElectionDefinition, 
                                  election_process: ElectionProcess, gaussian_generator: GaussianGenerator) -> Dict:
         """Comprehensive toxicity analysis for a single district."""
-        
+
+        # filter out candidates the balanced candidates
+        election_def.candidates = self.remove_balanced_candidates(election_def.candidates)
         # Use existing methods to get comprehensive analysis
         twin_result = self.test_twin_scenarios(election_def, election_process, gaussian_generator)
         toxic_scenario_result = self.test_toxic_scenarios(election_def, election_process, gaussian_generator)

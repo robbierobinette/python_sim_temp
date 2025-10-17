@@ -10,7 +10,7 @@ from simulation_base.simulation_config import UnitSimulationConfig, Congressiona
 from simulation_base.election_definition import ElectionDefinition
 from simulation_base.instant_runoff_election import InstantRunoffElection
 from simulation_base.election_with_primary import ElectionWithPrimary, ElectionWithPrimaryResult
-from simulation_base.head_to_head_election import HeadToHeadElection
+from simulation_base.condorcet_election import CondorcetElection
 from simulation_base.gaussian_generator import GaussianGenerator
 from simulation_base.election_result import ElectionResult
 from simulation_base.election_process import ElectionProcess
@@ -92,7 +92,7 @@ class CongressionalSimulation:
         if self.election_type == "primary":
             election_process = ElectionWithPrimary(primary_skew=self.config.primary_skew, debug=False)
         elif self.election_type == "condorcet":
-            election_process = HeadToHeadElection(debug=False)
+            election_process = CondorcetElection(debug=False)
         elif self.election_type == "irv":    # instant runoff
             election_process = InstantRunoffElection(debug=False)
         elif self.election_type == "custom":

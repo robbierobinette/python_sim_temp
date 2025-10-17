@@ -34,6 +34,7 @@ class PopulationTag:
         return self.short_name < other.short_name
 
 
+party_affinity = 1.5
 # Standard political parties
 DEMOCRATS = PopulationTag(
     name="Democratic",
@@ -42,8 +43,8 @@ DEMOCRATS = PopulationTag(
     hex_color="#0000ff",
     affinity={
         "Rep": 0.0,
-        "Ind": 0.75,
-        "Dem": 1.5
+        "Ind": party_affinity / 2,
+        "Dem": party_affinity
     }
 )
 
@@ -53,8 +54,8 @@ REPUBLICANS = PopulationTag(
     plural_name="Republicans",
     hex_color="#ff0000",
     affinity={
-        "Rep": 1.5,
-        "Ind": 0.75,
+        "Rep": party_affinity,
+        "Ind": party_affinity / 2,
         "Dem": 0.0
     }
 )
@@ -66,7 +67,7 @@ INDEPENDENTS = PopulationTag(
     hex_color="#ff00ff",
     affinity={
         "Rep": 0.0,
-        "Ind": 0.75,
+        "Ind": party_affinity / 2,
         "Dem": 0.0
     }
 )

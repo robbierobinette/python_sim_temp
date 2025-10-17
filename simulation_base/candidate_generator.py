@@ -217,12 +217,12 @@ class NormalPartisanCandidateGenerator(CandidateGenerator):
         median_candidate = self.get_median_candidate(population, self.median_variance, self.gaussian_generator)
         n_dems = self.n_partisan_candidates
         n_reps = self.n_partisan_candidates
-        if median_candidate.tag == DEMOCRATS:
-            n_dems -= 1
-        elif median_candidate.tag == REPUBLICANS:
-            n_reps -= 1
-        else:
-            raise ValueError(f"Median candidate has invalid tag: {median_candidate.tag}")
+        # if median_candidate.tag == DEMOCRATS:
+        #     n_dems -= 1
+        # elif median_candidate.tag == REPUBLICANS:
+        #     n_reps -= 1
+        # else:
+        #     raise ValueError(f"Median candidate has invalid tag: {median_candidate.tag}")
             
         
         # Generate Democratic candidates from normal distribution
@@ -348,7 +348,6 @@ class RandomCandidateGenerator(CandidateGenerator):
             candidates.append(median_candidate)
         
         return candidates
-
 
 class CondorcetCandidateGenerator(CandidateGenerator):
     """Generates Condorcet candidates distributed around the median voter."""

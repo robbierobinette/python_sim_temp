@@ -14,6 +14,7 @@ import geopandas as gpd
 import json
 import argparse
 import matplotlib.colors as mcolors
+import pandas as pd
 from typing import Optional, Dict, Any
 import warnings
 warnings.filterwarnings('ignore')
@@ -54,7 +55,7 @@ IDEOLOGY_COLORMAP = mcolors.LinearSegmentedColormap.from_list(
 )
 
 REPRESENTATION_COLORMAP = mcolors.LinearSegmentedColormap.from_list(
-    'representation', ['#000000', '#000000', '#654321', '#ff8c00', '#ffff00', '#008000']  # Black -> Brown -> Orange -> Yellow -> Green
+    'representation', ['#000000', '#000000', '#A52A2A', '#FFA500', '#ffff00', '#008000']  # Black -> Brown -> Orange -> Yellow -> Green
 )
 
 
@@ -105,6 +106,82 @@ def get_ideology_color(ideology: float, gradient_min: float = -1.5, gradient_max
     
     # Convert to hex color
     return mcolors.rgb2hex(rgb)
+
+
+def create_gradient_scale(height: int = 400) -> alt.Chart:
+    """
+    Create a vertical gradient scale for the representation colormap.
+    
+    The scale shows values from 20 to 100, with labels at 20, 40, 60, 80, and 100.
+    Colors correspond to the representation colormap (satisfaction values 0.2 to 1.0).
+    
+    Args:
+        height: Height of the gradient scale in pixels
+        
+    Returns:
+        Altair chart object containing the gradient scale
+    """
+    # Create data points for the gradient (from 20 to 100)
+    gradient_data = pd.DataFrame({
+        'y': range(20, 101),
+        'y2': range(21, 102),  # Next value for rectangle height
+        'x': [0] * 81,
+        'x2': [1] * 81
+    })
+    
+    # Add colors based on the representation colormap
+    # Map 20-100 to 0.2-1.0 in the satisfaction scale
+    gradient_data['color'] = gradient_data['y'].apply(
+        lambda v: get_representation_color((v - 20) / 80 * 0.8 + 0.2)
+    )
+    
+    # Create the gradient bar using mark_rect with y and y2
+    gradient_bar = alt.Chart(gradient_data).mark_rect().encode(
+        y=alt.Y('y:Q', 
+                axis=None,
+                scale=alt.Scale(domain=[20, 100])),
+        y2='y2:Q',
+        x=alt.X('x:Q', axis=None, scale=alt.Scale(domain=[-0.5, 1.5])),
+        x2='x2:Q',
+        color=alt.Color('color:N', scale=None, legend=None)
+    ).properties(
+        width=30,
+        height=height
+    )
+    
+    # Create labels at 20, 40, 60, 80, 100
+    label_data = pd.DataFrame({
+        'value': [20, 40, 60, 80, 100],
+        'label': ['20', '40', '60', '80', '100'],
+        'x': [1.2] * 5
+    })
+    
+    # Create text labels
+    labels = alt.Chart(label_data).mark_text(
+        align='left',
+        fontSize=12
+    ).encode(
+        y=alt.Y('value:Q', 
+                axis=None,
+                scale=alt.Scale(domain=[20, 100])),
+        x=alt.X('x:Q', axis=None, scale=alt.Scale(domain=[-0.5, 1.5])),
+        text='label:N'
+    ).properties(
+        width=30,
+        height=height
+    )
+    
+    # Combine bar and labels
+    scale_chart = (gradient_bar + labels).properties(
+        title=alt.TitleParams(
+            text='Representation %',
+            anchor='middle',
+            fontSize=13,
+            offset=10
+        )
+    )
+    
+    return scale_chart
 
 
 def draw_us_map(
@@ -228,14 +305,23 @@ def draw_us_map(
     # Apply the albersUsa projection (this is the key!)
     # This projection automatically positions Alaska, Hawaii, and Puerto Rico
     # in the lower-left corner, just like d3.geoAlbersUsa()
-    final_map = districts_layer.project(
+    map_chart = districts_layer.project(
         type='albersUsa'
     ).properties(
         width=width,
         height=height
-    ).configure_view(
-        strokeWidth=0  # Remove border around the chart
     )
+    
+    # Add gradient scale on the left if using representation colorization
+    if colorization == 'representation':
+        gradient_scale = create_gradient_scale(height=height)
+        final_map = alt.hconcat(gradient_scale, map_chart, spacing=20).configure_view(
+            strokeWidth=0  # Remove border around the chart
+        )
+    else:
+        final_map = map_chart.configure_view(
+            strokeWidth=0  # Remove border around the chart
+        )
     
     print(f"Saving map to '{output_path}'...")
     final_map.save(output_path)

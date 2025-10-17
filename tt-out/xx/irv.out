@@ -15,23 +15,23 @@ Toxicity Parameters:
 
 === NON-TOXIC BASE ELECTIONS ===
 Districts analyzed: 435
-  Toxic success: 423 (97.2%)
-    - Toxic twin wins: 363 (83.4%)
-    - Opposition wins: 28 (6.4%)
-    - Opponent toxic wins: 32 (7.4%)
-  Third candidate wins: 12 (2.8%)
+  Toxic success: 412 (94.7%)
+    - Toxic twin wins: 357 (82.1%)
+    - Opposition wins: 27 (6.2%)
+    - Opponent toxic wins: 28 (6.4%)
+  Third candidate wins: 23 (5.3%)
   Original winner wins: 0 (0.0%)
 
 === TOXIC BASE ELECTIONS ===
 Districts analyzed: 435
-  Non-toxic success: 0 (0.0%)
-    - Non-toxic twin wins: 0 (0.0%)
+  Non-toxic success: 1 (0.2%)
+    - Non-toxic twin wins: 1 (0.2%)
     - Opposition wins: 0 (0.0%)
-  Original winner wins: 435 (100.0%)
+  Original winner wins: 434 (99.8%)
 
 === SUMMARY ===
-  Percentage of toxic success: 97.2%
-  Percentage of non-toxic success: 0.0%
-  Percentage of toxic twin success: 83.4%
+  Percentage of toxic success: 94.7%
+  Percentage of non-toxic success: 0.2%
+  Percentage of toxic twin success: 82.1%
 
 Results saved to tt-out/xx/results-irv.json

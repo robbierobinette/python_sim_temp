@@ -1,9 +1,9 @@
 #!/bin/bash
 
-for e in primary irv condorcet ; do
-	candidates=3	
+for e in primary irv condorcet custom ; do
+	candidates=2	
 	condorcet_variance=.01
-	skew=0.25
+	skew=0.0
 	toxic_bonus=.25
 	toxic_penalty=-1
 	uncertainty=0.5
@@ -13,7 +13,7 @@ for e in primary irv condorcet ; do
 	odir="tt-out/xx"
 	mkdir -p $odir
 
-	if [[ $e == "condorcet" ]] ; then 
+	if [[ $e == "foo-condorcet" ]] ; then 
 		candidate_generator="condorcet"
 		condorcet_variance=.1
 	else
@@ -40,4 +40,5 @@ for e in primary irv condorcet ; do
 done
 
 wait
+grep succeeded $odir/*.out
 

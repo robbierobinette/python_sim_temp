@@ -14,7 +14,7 @@ from .topn_primary import TopNPrimary
 from .simple_plurality import SimplePlurality
 from .instant_runoff_election import InstantRunoffElection
 from .plurality_with_runoff import PluralityWithRunoff
-from .head_to_head_election import HeadToHeadElection
+from .condorcet_election import CondorcetElection
 
 
 class ActualCustomElection(ElectionProcess):
@@ -74,8 +74,6 @@ class ActualCustomElection(ElectionProcess):
             if self.debug:
                 print(f"Created Louisiana-2 election for {self.state_abbr}: single PluralityWithRunoff")
             return
-        
-        print(f"Creating ActualCustom election for {self.state_abbr}: {self.get_election_description()}")
         
         # Create primary process
         primary_process = self._create_primary_process()
@@ -139,7 +137,7 @@ class ActualCustomElection(ElectionProcess):
         elif general_type == "instant runoff":
             return InstantRunoffElection(debug=self.debug)
         elif general_type == "CCV":
-            return HeadToHeadElection(debug=self.debug)
+            return CondorcetElection(debug=self.debug)
         else:
             raise ValueError(f"bad general_election type: {general_type}")
     @property

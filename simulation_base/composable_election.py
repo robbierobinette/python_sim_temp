@@ -29,6 +29,13 @@ class ComposableElectionResult(ElectionResult):
     def ordered_results(self) -> List[CandidateResult]:
         """Ordered results of the general election."""
         return self.general_result.ordered_results()
+    def print_details(self):
+        """Print details of the composable election result."""
+        print(f"Composable election result:")
+        print(f"Primary result:")
+        self.primary_result.print_details()
+        print(f"General result:")
+        self.general_result.print_details()
     
     @property
     def n_votes(self) -> float:

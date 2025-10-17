@@ -12,7 +12,7 @@ import argparse
 from typing import List, Any, Dict
 from dataclasses import dataclass
 from simulation_base.ballot import RCVBallot
-from simulation_base.head_to_head_election import HeadToHeadElection
+from simulation_base.condorcet_election import CondorcetElection
 from simulation_base.simulation_runner import parse_simulation_args
 from simulation_base.unit_population import UnitPopulation
 from simulation_base.election_with_primary import ElectionWithPrimary
@@ -115,7 +115,7 @@ def create_composable_election(election_spec: Dict[str, Any], args: argparse.Nam
     elif general_type == "instant runoff":
         general_process = InstantRunoffElection(debug=debug)
     elif general_type == "CCV":
-        general_process = HeadToHeadElection(debug=debug)
+        general_process = CondorcetElection(debug=debug)
     else:
         # Default to plurality
         if general_runoff:

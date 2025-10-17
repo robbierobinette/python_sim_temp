@@ -18,6 +18,10 @@ class ElectionResult(ABC):
     """Abstract base class for election results."""
     
     @abstractmethod
+    def print_details(self):
+        """Print details of the election result."""
+        raise NotImplementedError("print_details is not implemented")
+
     def winner(self) -> Candidate:
         """Return the winning candidate."""
         pass

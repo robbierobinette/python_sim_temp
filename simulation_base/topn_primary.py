@@ -58,6 +58,10 @@ class TopNPrimaryResult(ElectionResult):
         """Total votes in the primary."""
         return self.primary_result.n_votes
     
+    def print_details(self):
+        print("Top-N primary result:")
+        self.primary_result.print_details()
+
     @property
     def topn_candidates(self) -> List[Candidate]:
         """Get the top N candidates that will advance to the general election."""
@@ -83,6 +87,8 @@ class TopNPrimary(ElectionProcess):
     def name(self) -> str:
         """Name of the election process."""
         return f"top{self.n}Primary"
+
+
     
     def run(self, candidates: List[Candidate], ballots: List[RCVBallot]) -> TopNPrimaryResult:
         """Run top-N primary election where all voters vote in the same primary.

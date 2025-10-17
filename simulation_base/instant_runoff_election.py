@@ -2,6 +2,9 @@
 Instant Runoff Voting (IRV) election implementation.
 """
 from typing import List, Set, Dict
+
+from simulation_base.simple_plurality import SimplePluralityResult
+from simulation_base.simple_plurality import SimplePlurality
 from .election_result import ElectionResult, CandidateResult
 from .candidate import Candidate
 from .ballot import RCVBallot
@@ -9,60 +12,15 @@ from .voter import Voter
 from .election_process import ElectionProcess
 
 
-class RCVRoundResult(ElectionResult):
-    """Result of a single round in IRV."""
-    
-    def __init__(self, candidates: List[Candidate], results: Dict[Candidate, float], 
-                 voter_satisfaction: float = 0.0):
-        self._candidates = candidates
-        self._results = results
-        self._voter_satisfaction = voter_satisfaction
-    
-    @property
-    def candidates(self) -> List[Candidate]:
-        """All candidates in this round."""
-        return self._candidates
-    
-    @property
-    def active_candidates(self) -> Set[Candidate]:
-        """Candidates still active in this round."""
-        return set(self._results.keys())
-    
-    def winner(self) -> Candidate:
-        """Return the winning candidate."""
-        return self.ordered_results()[0].candidate
-    
-    def voter_satisfaction(self) -> float:
-        """Return the voter satisfaction score."""
-        return self._voter_satisfaction
-    
-    def ordered_results(self) -> List[CandidateResult]:
-        """Return results ordered by vote count (descending)."""
-        return sorted([CandidateResult(candidate=c, votes=v) 
-                      for c, v in self._results.items()],
-                     key=lambda x: x.votes, reverse=True)
 
 
 class RCVResult(ElectionResult):
     """Complete IRV election result with multiple rounds."""
     
-    def __init__(self, rounds: List[RCVRoundResult], voter_satisfaction: float = 0.0):
+    def __init__(self, rounds: List[SimplePluralityResult], voter_satisfaction: float = 0.0):
         """Initialize RCV result."""
         self.rounds = rounds
         self._voter_satisfaction = voter_satisfaction
-    
-    @property
-    def all_round_results(self) -> List[CandidateResult]:
-        """All results from all rounds."""
-        results = []
-        if self.rounds:
-            # Add final round results
-            results.extend(self.rounds[-1].ordered_results())
-            # Add eliminated candidates from previous rounds
-            for round_result in reversed(self.rounds[:-1]):
-                if round_result.ordered_results():
-                    results.append(round_result.ordered_results()[-1])
-        return results
     
     def winner(self) -> Candidate:
         """Return the winning candidate."""
@@ -91,13 +49,11 @@ class RCVResult(ElectionResult):
         else:
             return 0.0
     
-    def print_detailed_results(self) -> None:
+    def print_details(self) -> None:
         """Print detailed results for all rounds."""
         for i, round_result in enumerate(self.rounds):
             print(f"Round {i + 1}")
-            for candidate_result in round_result.ordered_results():
-                print(f"\t{candidate_result.candidate.name:6s} {candidate_result.votes:5.0f}")
-
+            round_result.print_details()
 
 class InstantRunoffElection(ElectionProcess):
     """Instant Runoff Voting election process."""
@@ -132,20 +88,16 @@ class InstantRunoffElection(ElectionProcess):
     
     def _compute_round_result(self, ballots: List[RCVBallot], 
                              active_candidates: Set[Candidate],
-                             candidates: List[Candidate]) -> RCVRoundResult:
+                             candidates: List[Candidate]) -> SimplePluralityResult:
+        # use a simpleplurality here!
         """Compute result for a single round."""
-        results = {}
-        for ballot in ballots:
-            candidate = ballot.candidate(active_candidates)
-            if candidate:
-                results[candidate] = results.get(candidate, 0.0) + 1.0
-        
-        return RCVRoundResult(candidates, results)
+        simple_plurality = SimplePlurality(debug=self.debug)
+        return simple_plurality.run(active_candidates, ballots)
     
-    def _compute_rounds(self, prior_rounds: List[RCVRoundResult], 
+    def _compute_rounds(self, prior_rounds: List[SimplePluralityResult], 
                        ballots: List[RCVBallot], 
                        active_candidates: Set[Candidate],
-                       candidates: List[Candidate]) -> List[RCVRoundResult]:
+                       candidates: List[Candidate]) -> List[SimplePluralityResult]:
         """Compute all rounds of IRV."""
         n_ballots = len(ballots)
         round_result = self._compute_round_result(ballots, active_candidates, candidates)
@@ -163,11 +115,8 @@ class InstantRunoffElection(ElectionProcess):
             else:
                 return prior_rounds + [round_result]
     
-    def _debug_print(self, rounds: List[RCVRoundResult]) -> None:
+    def _debug_print(self, rounds: List[SimplePluralityResult]) -> None:
         """Print debug information for rounds."""
-        for round_result in rounds:
-            print("Round!")
-            for candidate_result in round_result.ordered_results():
-                print(f"{candidate_result.candidate.name:20s} "
-                      f"{candidate_result.candidate.ideology:6.0f} "
-                      f"{candidate_result.votes:8.2f}")
+        for i, round_result in enumerate(rounds):
+            print(f"Round {i + 1}")
+            round_result.print_details()

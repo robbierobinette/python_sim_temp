@@ -39,6 +39,13 @@ class ClosedPrimaryResult(ElectionResult):
             if (candidate.tag != DEMOCRATS and candidate.tag != REPUBLICANS and 
                 candidate not in self._final_candidates):
                 self._final_candidates.append(candidate)
+    def print_details(self):
+        """Print details of the closed primary result."""
+        print("Closed primary result:")
+        print("Democratic primary:")
+        self.democratic_primary.print_details()
+        print("Republican primary:")
+        self.republican_primary.print_details()
     
     def winner(self) -> Candidate:
         """Return the Democratic primary winner (for compatibility)."""

@@ -15,23 +15,23 @@ Toxicity Parameters:
 
 === NON-TOXIC BASE ELECTIONS ===
 Districts analyzed: 435
-  Toxic success: 0 (0.0%)
+  Toxic success: 74 (17.0%)
     - Toxic twin wins: 0 (0.0%)
     - Opposition wins: 0 (0.0%)
-    - Opponent toxic wins: 0 (0.0%)
-  Third candidate wins: 2 (0.5%)
-  Original winner wins: 433 (99.5%)
+    - Opponent toxic wins: 74 (17.0%)
+  Third candidate wins: 0 (0.0%)
+  Original winner wins: 361 (83.0%)
 
 === TOXIC BASE ELECTIONS ===
 Districts analyzed: 435
-  Non-toxic success: 355 (81.6%)
-    - Non-toxic twin wins: 355 (81.6%)
+  Non-toxic success: 435 (100.0%)
+    - Non-toxic twin wins: 435 (100.0%)
     - Opposition wins: 0 (0.0%)
-  Original winner wins: 80 (18.4%)
+  Original winner wins: 0 (0.0%)
 
 === SUMMARY ===
-  Percentage of toxic success: 0.0%
-  Percentage of non-toxic success: 81.6%
+  Percentage of toxic success: 17.0%
+  Percentage of non-toxic success: 100.0%
   Percentage of toxic twin success: 0.0%
 
 Results saved to tt-out/xx/results-condorcet.json

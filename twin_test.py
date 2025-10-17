@@ -10,7 +10,8 @@ import argparse
 from typing import List
 from simulation_base.actual_custom_election import ActualCustomElection
 from simulation_base.candidate import Candidate
-from simulation_base.candidate_generator import NormalPartisanCandidateGenerator, PartisanCandidateGenerator, CondorcetCandidateGenerator
+from simulation_base.candidate_generator import CandidateGenerator, NormalPartisanCandidateGenerator, PartisanCandidateGenerator, CondorcetCandidateGenerator
+from simulation_base.combined_population import CombinedPopulation
 from simulation_base.instant_runoff_election import InstantRunoffElection
 from simulation_base.population_tag import DEMOCRATS, REPUBLICANS, INDEPENDENTS
 from simulation_base.unit_population import UnitPopulation
@@ -18,12 +19,11 @@ from simulation_base.election_config import ElectionConfig
 from simulation_base.election_with_primary import ElectionWithPrimary
 from simulation_base.gaussian_generator import GaussianGenerator, set_seed
 from simulation_base.election_process import ElectionProcess
-from simulation_base.head_to_head_election import HeadToHeadElection
+from simulation_base.condorcet_election import CondorcetElection
 from simulation_base.district_voting_record import DistrictVotingRecord
 from simulation_base.ballot import RCVBallot
 from simulation_base.population_tag import PopulationTag
 from simulation_base.cook_political_data import CookPoliticalData
-import csv
 
 
 def load_districts(csv_file: str) -> List[DistrictVotingRecord]:
@@ -83,8 +83,7 @@ def run_election(candidates: List[Candidate],
     # Run election with new interface
     return election_process.run(candidates, ballots)
 
-
-def run_twin_test(district: DistrictVotingRecord,
+def run_all_test(district: DistrictVotingRecord,
                  candidate_generator,
                  config: ElectionConfig,
                  gaussian_generator: GaussianGenerator,
@@ -93,112 +92,68 @@ def run_twin_test(district: DistrictVotingRecord,
                  toxic_bonus: float,
                  toxic_penalty: float,
                  nvoters: int,
-                 verbose: bool = False) -> dict:
-    """
-    Run the twin test for a single district.
-    
-    Returns dict with:
-        - district: district name
-        - lean: expected lean
-        - base_winner: name of base winner
-        - base_ideology: ideology of base winner
-        - test_result: 'success', 'failure', or 'flip'
-        - final_winner: name of final winner
-        - final_ideology: ideology of final winner
-    """
-    # Create population for this district
+                 args: argparse.Namespace) -> dict:
+
     population = UnitPopulation.create(district, n_voters=nvoters)
-    # Create election process
     election_process = create_election_process(election_type, district, primary_skew)
-    
-    # Generate candidates
     candidates = candidate_generator.candidates(population)
-    
-    # Run base election
     base_result = run_election(candidates, population, election_process, config, gaussian_generator)
     base_winner = base_result.winner()
-    
-    # Create toxic twin of the base winner
-    toxic_twin = apply_toxic_tactics(base_winner, toxic_bonus, toxic_penalty)
-    
-    # Create new candidate list with toxic twin replacing base winner's party opponents
-    new_candidates = []
-    for candidate in candidates:
-        if candidate.tag != base_winner.tag:
-            new_candidates.append(candidate)
-    
-    new_candidates.append(toxic_twin)
-    new_candidates.append(base_winner)
-    
-    # Run election with toxic twin
-    new_result = run_election(new_candidates, population, election_process, config, gaussian_generator)
-    new_winner = new_result.winner()
-    
-    # Determine result
-    if new_winner.name == base_winner.name:
-        result = {
-            'district': district.district,
-            'lean': district.expected_lean,
-            'base_winner': base_winner.name,
-            'base_ideology': base_winner.ideology,
-            'test_result': 'failure',
-            'final_winner': new_winner.name,
-            'final_ideology': new_winner.ideology
-        }
-    elif new_winner.name == toxic_twin.name:
-        result = {
-            'district': district.district,
-            'lean': district.expected_lean,
-            'base_winner': base_winner.name,
-            'base_ideology': base_winner.ideology,
-            'test_result': 'success',
-            'final_winner': new_winner.name,
-            'final_ideology': new_winner.ideology
-        }
-    elif new_winner.tag != base_winner.tag and new_winner.name != toxic_twin.name:
-        # Opposition party won - test if their toxic twin would also win
-        opposition_toxic_twin = apply_toxic_tactics(new_winner, toxic_bonus, toxic_penalty)
-        
-        # Create third election with 4 candidates
-        third_candidates = [base_winner, toxic_twin, new_winner, opposition_toxic_twin]
-        third_result = run_election(third_candidates, population, election_process, config, gaussian_generator)
-        third_winner = third_result.winner()
-        
-        if third_winner.name == opposition_toxic_twin.name:
-            result = {
-                'district': district.district,
-                'lean': district.expected_lean,
-                'base_winner': base_winner.name,
-                'base_ideology': base_winner.ideology,
-                'test_result': 'success_flip',
-                'final_winner': third_winner.name,
-                'final_ideology': third_winner.ideology
-            }
+    results = []
+    for i, c in enumerate(candidates):
+        new_candidates = candidates.copy()
+        toxic_candidate = apply_toxic_tactics(c, toxic_bonus, toxic_penalty)
+        if c.name != base_winner.name:
+            new_candidates[i] = toxic_candidate
         else:
-            result = {
+            new_candidates.append(toxic_candidate)
+        result = run_election(new_candidates, population, election_process, config, gaussian_generator)
+        results.append(result)
+        winner = result.winner()
+        if winner.name == toxic_candidate.name:
+            if args.verbose and args.election_type == 'condorcet':
+                print(f"Toxic Success:  District: {district.district} Lean: {district.expected_lean}")
+                print(f"Base winner: {base_winner.name} ", end="")
+                print(f"Toxic winner: {toxic_candidate.name}")
+                result.print_details()
+            return {
                 'district': district.district,
                 'lean': district.expected_lean,
                 'base_winner': base_winner.name,
-                'base_ideology': base_winner.ideology,
-                'test_result': 'failure_flip',
-                'final_winner': third_winner.name,
-                'final_ideology': third_winner.ideology
+                'toxic_winner': toxic_candidate.name,
+                'test_result': 'success',
             }
-    else:
-        raise RuntimeError(f"Unexpected scenario in toxicity analysis: base_winner={base_winner}, new_winner={new_winner}, toxic_twin={toxic_twin}")
 
-    if verbose:
-        print(f"{result['test_result']:15s} {result['district']:10s} lean={result['lean']:6.1f} "
-              f"{result['base_winner']:10s}({result['base_ideology']:5.2f}) -> "
-              f"{result['final_winner']:15s}({result['final_ideology']:5.2f})")
-    
-    return result
+    if args.verbose:
+        print(f"Toxic Failure:  District: {district.district} Lean: {district.expected_lean}")
+        for candidate, result in zip(candidates, results):
+            tc = apply_toxic_tactics(candidate, toxic_bonus, toxic_penalty)
+            print(f"testing candidate: {tc.name:12s} {tc.ideology:5.2f} {tc.quality:5.2f} {tc.affinity_string()}")
+            result.print_details()
+
+    return {
+        'district': district.district,
+        'lean': district.expected_lean,
+        'base_winner': base_winner.name,
+        'toxic_winner': None,
+        'test_result': 'failure',
+    }
+
+
+
+class BalancedCandidateFilter(CandidateGenerator):
+    def __init__(self, generator: CandidateGenerator):
+        self.generator = generator
+    def candidates(self, population: CombinedPopulation) -> List[Candidate]:
+        base_candidates = self.generator.candidates(population)
+        filtered_candidates = [ c for c in base_candidates if c.name[1:] != "-V"]
+        return filtered_candidates
 
 
 def create_candidate_generator(args, gaussian_generator):
     """Create candidate generator based on arguments."""
     if args.candidate_generator == 'normal-partisan':
-        return NormalPartisanCandidateGenerator(
+        cg = NormalPartisanCandidateGenerator(
             n_partisan_candidates=args.candidates,
             ideology_variance=args.ideology_variance,
             quality_variance=args.quality_variance,
@@ -206,13 +161,10 @@ def create_candidate_generator(args, gaussian_generator):
             median_variance=0.0,
             gaussian_generator=gaussian_generator
         )
-    elif args.candidate_generator == 'partisan':
-        return PartisanCandidateGenerator(
-            n_partisan_candidates=args.candidates,
-            spread=args.spread,
-            quality_variance=args.quality_variance,
-            gaussian_generator=gaussian_generator
-        )
+        if args.filter_balanced_candidates:
+            return BalancedCandidateFilter(cg)
+        else:
+            return cg
     elif args.candidate_generator == 'condorcet':
         return CondorcetCandidateGenerator(
             n_candidates=args.candidates,
@@ -231,7 +183,7 @@ def create_election_process(election_type: str, district: DistrictVotingRecord, 
     elif election_type == 'irv':
         return InstantRunoffElection(debug=False)
     elif election_type == 'condorcet':
-        return HeadToHeadElection(debug=False)
+        return CondorcetElection(debug=False)
     elif election_type == 'top2':
         # use california as the state for the top-2 election
         return ActualCustomElection(state_abbr='CA', primary_skew=primary_skew, debug=True)
@@ -240,6 +192,12 @@ def create_election_process(election_type: str, district: DistrictVotingRecord, 
     else:
         raise ValueError(f"Unknown election type: {election_type}")
 
+
+def print_stats(label: str, stats: {}):
+    successes = stats['successes']
+    failures = stats['failures']
+    total_districts = successes + failures
+    print(f"{label}: {successes}/{total_districts} ({successes/total_districts*100:.1f}%)")
 
 def main():
     """Run twin test across all congressional districts."""
@@ -279,7 +237,8 @@ def main():
                        help='Spread for partisan candidate generator')
     parser.add_argument('--condorcet-variance', type=float, default=0.1,
                        help='Ideology variance for Condorcet candidates')
-    
+    parser.add_argument('--filter-balanced-candidates', action='store_true',
+                       help='Filter balanced candidates')
     # Toxicity parameters
     parser.add_argument('--toxic-bonus', type=float, default=0.25,
                        help='Ideology bonus for toxic tactics (moves toward extreme)')
@@ -306,7 +265,7 @@ def main():
     
     
     # Load districts
-    districts = load_districts(args.data_file)
+    districts: List[DistrictVotingRecord] = load_districts(args.data_file)
     
     # Filter districts if specific ones requested
     if args.districts:
@@ -328,12 +287,17 @@ def main():
     
     # Run tests
     results = []
-    toxic_success = 0
-    toxic_failure = 0
-    toxic_flip = 0
+
+    # Top-2 states are the states that have a top-2 election
+    # create a set of the abbreviations of the top-2 states
+    top2_states = set(['CA', 'WA', 'LA'])
+    top2_stats = {'successes': 0, 'failures': 0}
+    other_stats = {'successes': 0, 'failures': 0}
+    all_stats = {'successes': 0, 'failures': 0}
+
     
     for district in districts:
-        result = run_twin_test(
+        result = run_all_test(
             district=district,
             candidate_generator=candidate_generator,
             config=config,
@@ -343,46 +307,37 @@ def main():
             toxic_bonus=args.toxic_bonus,
             toxic_penalty=args.toxic_penalty,
             nvoters=args.nvoters,
-            verbose=args.verbose
+            args=args
         )
         results.append(result)
         
         # Count results
         if result['test_result'] in ['success', 'success_flip']:
-            toxic_success += 1
-            if result['test_result'] == 'success_flip':
-                toxic_flip += 1
-        elif result['test_result'] in ['failure', 'failure_flip']:
-            toxic_failure += 1
-            if result['test_result'] == 'failure_flip':
-                toxic_flip += 1
+            all_stats['successes'] += 1
+            if district.state in top2_states:
+                top2_stats['successes'] += 1
+            else:
+                other_stats['successes'] += 1
+        else:
+            all_stats['failures'] += 1
+            if district.state in top2_states:
+                top2_stats['failures'] += 1
+            else:
+                other_stats['failures'] += 1
+
     
     # Print summary
     print()
     print("=" * 60)
-    print("SUMMARY:")
-    print(f"Total districts tested: {len(results)}")
-    print(f"Toxic tactics succeeded: {toxic_success} ({toxic_success/len(results)*100:.1f}%)")
-    print(f"Toxic tactics failed: {toxic_failure} ({toxic_failure/len(results)*100:.1f}%)")
-    print(f"Flips to opposition: {toxic_flip} ({toxic_flip/len(results)*100:.1f}%)")
-    
-    # Break down by lean
-    dem_districts = [r for r in results if r['lean'] < -5]
-    rep_districts = [r for r in results if r['lean'] > 5]
-    swing_districts = [r for r in results if -5 <= r['lean'] <= 5]
-    
-    if dem_districts:
-        dem_success = sum(1 for r in dem_districts if r['test_result'] in ['success', 'success_flip'])
-        print(f"\nDemocratic districts (lean < -5): {dem_success}/{len(dem_districts)} ({dem_success/len(dem_districts)*100:.1f}%)")
-    
-    if rep_districts:
-        rep_success = sum(1 for r in rep_districts if r['test_result'] in ['success', 'success_flip'])
-        print(f"Republican districts (lean > 5): {rep_success}/{len(rep_districts)} ({rep_success/len(rep_districts)*100:.1f}%)")
-    
-    if swing_districts:
-        swing_success = sum(1 for r in swing_districts if r['test_result'] in ['success', 'success_flip'])
-        print(f"Swing districts (-5 <= lean <= 5): {swing_success}/{len(swing_districts)} ({swing_success/len(swing_districts)*100:.1f}%)")
+    if args.election_type == 'custom':
+        print_stats("Top-2 states", top2_stats)
+        print_stats("Other states", other_stats)
+    print_stats("All states  ", all_stats)
 
 
 if __name__ == "__main__":
     main()
+    # import cProfile
+    # cProfile.run('main()', sort='cumulative', filename='twin_test.prof')
+    # import pstats
+    # pstats.Stats('twin_test.prof').sort_stats('cumulative').print_stats(50)

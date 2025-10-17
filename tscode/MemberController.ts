@@ -71,7 +71,7 @@ class MemberController extends Controller {
   setH2HMembers = () => {
     let h2hMembers = this.combinedDistrictData.districts.map(district => {
       let dw = this.combinedDistrictData.DWNominate.house(117, district)
-      let ideology = this.combinedDistrictData.sampleCongress[district].ideology("headToHead")
+      let ideology = this.combinedDistrictData.sampleCongress[district].ideology("condorcet")
       return new Member(dw.representativeName, dw.party, ideology / 30, "House", district)
     })
     this.bubbles = h2hMembers.map(m => new MemberBubble(m, this.radius))
@@ -166,7 +166,7 @@ class MemberController extends Controller {
     this.dirty = true
     // Set simulatedLayout flag based on the layout name
     // Only set to true if explicitly simulation-related, preserve false for actual data
-    if (name.includes("headToHead") || name.includes("consensus")) {
+    if (name.includes("condorcet") || name.includes("consensus")) {
       this.simulatedLayout = true
     } else if (name.includes("actual")) {
       this.simulatedLayout = false
@@ -325,7 +325,7 @@ class MemberController extends Controller {
     flyover.select("#party").html(mb.member.party.name)
     // convert back to raw dwNominate and then multiply by 100.
     let ideology = (this.simulatedLayout) ?
-        this.combinedDistrictData.sampleIdeology("headToHead", mb.member.district) :
+        this.combinedDistrictData.sampleIdeology("condorcet", mb.member.district) :
         mb.member.ideology
     flyover.select("#ideology").html(Math.round(ideology / this.ranges.dwNominateScale * 100) + "")
 

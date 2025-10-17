@@ -2,19 +2,24 @@
 Simple plurality voting implementation for primaries.
 """
 from typing import List, Dict
+
+from simulation_base.population_tag import INDEPENDENTS, DEMOCRATS, REPUBLICANS
 from .election_result import ElectionResult, CandidateResult
 from .ballot import RCVBallot
 from .candidate import Candidate
+from .population_tag import PopulationTag
 from .election_process import ElectionProcess
 
 
 class SimplePluralityResult(ElectionResult):
     """Result of a simple plurality election."""
     
-    def __init__(self, results: Dict[Candidate, float], voter_satisfaction: float = 0.0):
+    def __init__(self, results: Dict[Candidate, float], breakdown: Dict[Candidate, Dict[str, float]], voter_satisfaction: float = 0.0):
         """Initialize simple plurality result."""
         self._results = results
+        self._breakdown = breakdown
         self._voter_satisfaction = voter_satisfaction
+        self._candidate_map = {c.name: c for c in results.keys()}
     
     def winner(self) -> Candidate:
         """Return the winning candidate."""
@@ -23,7 +28,18 @@ class SimplePluralityResult(ElectionResult):
     def voter_satisfaction(self) -> float:
         """Return the voter satisfaction score."""
         return self._voter_satisfaction
-    
+
+    def print_details(self):
+        """Print details of the simple plurality result."""
+        print("Simple plurality result:")
+        for cr in self.ordered_results():
+            c = cr.candidate
+            print(f"  {c.name:12s} {c.ideology:5.2f} {c.quality:5.2f} {cr.votes:8.0f} {c.affinity_string()}", end=" ")
+            print("\tBreakdown:", end=" ")
+            for t in [DEMOCRATS.short_name, REPUBLICANS.short_name, INDEPENDENTS.short_name]:
+                print(f" {t:5s}: {self._breakdown[c.name][t]:5.2f}", end=" ")
+            print()
+
     def ordered_results(self) -> List[CandidateResult]:
         """Return results ordered by vote count (descending)."""
         return sorted([CandidateResult(candidate=c, votes=v) 
@@ -51,17 +67,27 @@ class SimplePlurality(ElectionProcess):
     def run(self, candidates: List[Candidate], ballots: List[RCVBallot]) -> SimplePluralityResult:
         """Run simple plurality election with the given candidates and ballots."""
         # Count first-choice votes
-        results = {}
+
+
+        # use string based dicts because hashing objects is slow 
+        raw_results = {}
+        breakdown = {}
+        for c in candidates:
+            raw_results[c.name] = 0.0
+            breakdown[c.name] = {DEMOCRATS.short_name: 0.0, REPUBLICANS.short_name: 0.0, INDEPENDENTS.short_name: 0.0}
+
+
         for ballot in ballots:
             # Get first choice candidate
-            first_choice = ballot.candidate(set(candidates))
-            if first_choice:
-                results[first_choice] = results.get(first_choice, 0.0) + 1.0
+            first_choice = ballot.candidate(candidates).name
+            breakdown[first_choice][ballot.voter.party.tag.short_name] += 1.0
+            raw_results[first_choice] += 1.0
         
-        # Ensure all candidates are in results (with 0 votes if needed)
-        for candidate in candidates:
-            if candidate not in results:
-                results[candidate] = 0.0
-        
-        return SimplePluralityResult(results, 0.0)
+        results = {}
+        cmap = {c.name: c for c in candidates}
+        for name, count in raw_results.items():
+            results[cmap[name]] = count
+
+
+        return SimplePluralityResult(results, breakdown)
     
