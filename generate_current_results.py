@@ -142,7 +142,7 @@ def generate_actual_results(members: List[Dict]) -> CongressionalSimulationResul
         dvr = dvr_map[district_name]
         
         # Create population for this district
-        population = UnitPopulation.create(dvr, n_voters=1000)
+        population = UnitPopulation.create(dvr, n_voters=1000, seed=0)
         
         # Calculate voter satisfaction
         satisfaction = calculate_voter_satisfaction(member, population)

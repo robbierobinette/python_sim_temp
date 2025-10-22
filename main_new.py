@@ -22,7 +22,7 @@ def main():
     
     # Run simulation using shared runner
     simulation, result = run_simulation(
-        config, gaussian_generator, args.data_file, args.election_type, args.verbose
+        config, gaussian_generator, args.data_file, args.election_type, args.verbose, args.n_condorcet
     )
     
     if args.verbose:

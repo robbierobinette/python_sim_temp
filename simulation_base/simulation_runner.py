@@ -115,6 +115,12 @@ def parse_simulation_args(description: str = "Simulate congressional elections")
         default=0.0,
         help="Quality variance for candidate generation (default: 0.0)"
     )
+    parser.add_argument(
+        "--n-condorcet", 
+        type=int,
+        default=1,
+        help="Number of median/condorcet candidates to generate (default: 1)"
+    )
     
     return parser
 
@@ -146,7 +152,8 @@ def setup_simulation(args: argparse.Namespace) -> tuple:
         'ideology_variance': args.ideology_variance,
         'spread': args.spread,
         'quality_variance': args.quality_variance,
-        'partisan_shift': args.partisan_shift
+        'partisan_shift': args.partisan_shift,
+        'n_condorcet': args.n_condorcet
     }
     
     config = CongressionalSimulationConfigFactory.create_config(config_params)
@@ -157,7 +164,7 @@ def setup_simulation(args: argparse.Namespace) -> tuple:
     return config, gaussian_generator
 
 
-def run_simulation(config, gaussian_generator, data_file: str, election_type: str, verbose: bool = False):
+def run_simulation(config, gaussian_generator, data_file: str, election_type: str, verbose: bool = False, n_condorcet: int = 1):
     """Run the simulation with given configuration."""
     from congressional_simulation import CongressionalSimulation
     

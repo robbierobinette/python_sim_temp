@@ -2,8 +2,6 @@
 """
 Main program to run congressional election simulation.
 
-This program simulates elections for all 435 congressional districts using
-ranked choice voting (instant runoff) based on the Cook Political Report data.
 """
 
 import sys
@@ -22,7 +20,7 @@ def main():
     
     # Run simulation using shared runner
     simulation, result = run_simulation(
-        config, gaussian_generator, args.data_file, args.election_type, args.verbose
+        config, gaussian_generator, args.data_file, args.election_type, args.verbose, args.n_condorcet
     )
     
     # Print summary

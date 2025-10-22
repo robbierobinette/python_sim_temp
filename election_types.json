@@ -10,7 +10,7 @@
     "abbr": "AK",
     "primary": "top-4",
     "primary_runoff": false,
-    "general": "instant runoff",
+    "general": "IRV",
     "general_runoff": false
   },
   "Arizona": {
@@ -129,7 +129,7 @@
     "abbr": "ME",
     "primary": "closed-partisan",
     "primary_runoff": false,
-    "general": "instant runoff",
+    "general": "IRV",
     "general_runoff": false
   },
   "Maryland": {
@@ -350,11 +350,46 @@
     "general_runoff": false
   },
 
-  "TBD": {
-    "abbr": "XX",
+  "C3": {
+    "abbr": "C3",
+    "primary": "top-3",
+    "primary_runoff": false,
+    "general": "CCV",
+    "general_runoff": false
+  },
+  "C4": {
+    "abbr": "C4",
+    "primary": "top-4",
+    "primary_runoff": false,
+    "general": "CCV",
+    "general_runoff": false
+  },
+  "C5": {
+    "abbr": "C5",
     "primary": "top-5",
     "primary_runoff": false,
     "general": "CCV",
+    "general_runoff": false
+  },
+  "I3": {
+    "abbr": "I3",
+    "primary": "top-3",
+    "primary_runoff": false,
+    "general": "IRV",
+    "general_runoff": false
+  },
+  "I4": {
+    "abbr": "I4",
+    "primary": "top-4",
+    "primary_runoff": false,
+    "general": "IRV",
+    "general_runoff": false
+  },
+  "I5": {
+    "abbr": "I5",
+    "primary": "top-5",
+    "primary_runoff": false,
+    "general": "IRV",
     "general_runoff": false
   }
 }

@@ -27,18 +27,19 @@ class UnitPopulation:
         return 1.0
     
     @staticmethod
-    def create(dvr: DistrictVotingRecord, n_voters: int = 1000) -> CombinedPopulation:
+    def create(dvr: DistrictVotingRecord, n_voters: int, seed: int) -> CombinedPopulation:
         """Create population with default parameters."""
         return UnitPopulation.create_with_params(
             dvr, UnitPopulation.default_partisanship(), 
             UnitPopulation.default_stddev(), 
             UnitPopulation.default_skew(), 
-            n_voters
+            n_voters,
+            seed=seed
         )
     
     @staticmethod
     def create_with_params(dvr: DistrictVotingRecord, partisanship: float, 
-                          stddev: float, skew_factor: float, n_voters: int, seed: Optional[int] = None) -> CombinedPopulation:
+                          stddev: float, skew_factor: float, n_voters: int, seed: int) -> CombinedPopulation:
         """Create population with specified parameters."""
         return UnitPopulation.create_from_lean(
             dvr, dvr.expected_lean, partisanship, stddev, skew_factor, n_voters, seed

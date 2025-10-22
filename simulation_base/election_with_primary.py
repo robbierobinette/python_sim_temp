@@ -39,6 +39,15 @@ class ElectionWithPrimaryResult(ElectionResult):
         """Total votes in general election."""
         return self.general_election.n_votes
 
+    def print_details(self) -> None:
+        """Print details of the election with primary."""
+        print("Democratic primary result:")
+        self.democratic_primary.print_details()
+        print("Republican primary result:")
+        self.republican_primary.print_details()
+        print("General election result:")
+        self.general_election.print_details()
+ 
 
 class ElectionWithPrimary(ElectionProcess):
     """Election process with separate Democratic and Republican primaries."""
@@ -49,7 +58,9 @@ class ElectionWithPrimary(ElectionProcess):
         self.debug = debug
         self.dem_primary_factions = {DEMOCRATS}  # Could add Progressive, etc.
         self.rep_primary_factions = {REPUBLICANS}
-    
+
+
+   
     @property
     def name(self) -> str:
         """Name of the election process."""
@@ -91,10 +102,8 @@ class ElectionWithPrimary(ElectionProcess):
         
         # Run Democratic primary
         dem_primary_result = self._run_primary(dem_candidates, dem_ballots)
-        
         # Run Republican primary
         rep_primary_result = self._run_primary(rep_candidates, rep_ballots)
-        
         # Get primary winners
         dem_winner = dem_primary_result.ordered_results()[0].candidate
         rep_winner = rep_primary_result.ordered_results()[0].candidate
@@ -107,7 +116,6 @@ class ElectionWithPrimary(ElectionProcess):
         # Run general election with primary winners + others
         final_candidates = other_candidates + [dem_winner, rep_winner]
         general_result = self._run_general(final_candidates, ballots)
-        
         if self.debug:
             self._print_debug_results_from_ballots(candidates, 
                 dem_primary_result, 

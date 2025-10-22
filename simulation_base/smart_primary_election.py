@@ -136,7 +136,7 @@ class SmartPrimaryElection(ElectionProcess):
             else:
                 return SimplePlurality(debug=self.debug)
         
-        elif general_type == "instant runoff":
+        elif general_type == "IRV":
             return InstantRunoffElection(debug=self.debug)
         
         else:

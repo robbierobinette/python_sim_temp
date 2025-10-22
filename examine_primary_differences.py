@@ -17,9 +17,10 @@ from simulation_base.simulation_runner import parse_simulation_args
 from simulation_base.unit_population import UnitPopulation
 from simulation_base.election_with_primary import ElectionWithPrimary
 from simulation_base.election_config import ElectionConfig
-
+from simulation_base.district_voting_record import DistrictVotingRecord
 from simulation_base.gaussian_generator import GaussianGenerator
 from simulation_base.candidate_generator import NormalPartisanCandidateGenerator
+from simulation_base.combined_population import CombinedPopulation
 
 
 @dataclass
@@ -40,7 +41,7 @@ class ComparisonResult:
     alt_winner_name: str
 
 
-def load_election_types() -> List[Dict[str, Any]]:
+def load_election_types() -> Dict[str, Any]:
     """Load unique election types from election_types.json."""
     with open("election_types.json", "r") as f:
         data = json.load(f)
@@ -112,7 +113,7 @@ def create_composable_election(election_spec: Dict[str, Any], args: argparse.Nam
             general_process = PluralityWithRunoff(debug=debug)
         else:
             general_process = SimplePlurality(debug=debug)
-    elif general_type == "instant runoff":
+    elif general_type == "IRV":
         general_process = InstantRunoffElection(debug=debug)
     elif general_type == "CCV":
         general_process = CondorcetElection(debug=debug)
@@ -126,16 +127,10 @@ def create_composable_election(election_spec: Dict[str, Any], args: argparse.Nam
     return ComposableElection(primary_process, general_process, debug=debug)
 
 
-def create_population(partisan_lean: int, seed: int, nvoters: int = 1000) -> Any:
+def create_population(partisan_lean: int, seed: int, nvoters: int) -> CombinedPopulation:
     """Create a population with the given partisan lean and seed."""
-    return UnitPopulation.create_from_lean(
-        lean=partisan_lean,
-        partisanship=1.0,
-        stddev=1.0,
-        skew_factor=0.0,
-        n_voters=nvoters,
-        seed=seed
-    )
+    dvr = DistrictVotingRecord.create_dummy(lean=partisan_lean, district_name="XX-01")
+    return UnitPopulation.create(dvr=dvr, n_voters=nvoters, seed=seed)
 
 
 def create_candidates(population: Any, seed: int, args: Dict[str, Any]) -> List[Any]:

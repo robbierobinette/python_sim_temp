@@ -200,6 +200,7 @@ class NormalPartisanCandidateGenerator(CandidateGenerator):
                 primary_skew: float,
                 median_variance: float,
                 gaussian_generator: GaussianGenerator,
+                n_condorcet: int = 1,
 ):
         """Initialize normal partisan candidate generator."""
         super().__init__(quality_variance)
@@ -208,25 +209,14 @@ class NormalPartisanCandidateGenerator(CandidateGenerator):
         self.primary_skew = primary_skew
         self.median_variance = median_variance
         self.gaussian_generator = gaussian_generator
+        self.n_condorcet = n_condorcet
     
     def candidates(self, population: CombinedPopulation) -> List[Candidate]:
         """Generate all candidates for the population."""
         candidates = []
 
-
-        median_candidate = self.get_median_candidate(population, self.median_variance, self.gaussian_generator)
-        n_dems = self.n_partisan_candidates
-        n_reps = self.n_partisan_candidates
-        # if median_candidate.tag == DEMOCRATS:
-        #     n_dems -= 1
-        # elif median_candidate.tag == REPUBLICANS:
-        #     n_reps -= 1
-        # else:
-        #     raise ValueError(f"Median candidate has invalid tag: {median_candidate.tag}")
-            
-        
         # Generate Democratic candidates from normal distribution
-        for i in range(n_dems):
+        for i in range(self.n_partisan_candidates):
             # Draw from normal distribution centered at Democratic mean
             ideology = population.democrats.mean - self.primary_skew + self.gaussian_generator() * self.ideology_variance 
             ideology += self.get_primary_offset(population.district.state, DEMOCRATS)
@@ -239,11 +229,14 @@ class NormalPartisanCandidateGenerator(CandidateGenerator):
             )
             candidates.append(candidate)
         
-        # Add median candidate
-        candidates.append(median_candidate)
+        # Generate median/condorcet candidates
+        for i in range(self.n_condorcet):
+            median_candidate = self.get_median_candidate(population, self.median_variance, self.gaussian_generator)
+            median_candidate.name = f"C-{i + 1}"  # Rename to distinguish multiple condorcet candidates
+            candidates.append(median_candidate)
         
         # Generate Republican candidates from normal distribution
-        for i in range(n_reps):
+        for i in range(self.n_partisan_candidates):
             # Draw from normal distribution centered at Republican mean
             ideology = population.republicans.mean + self.primary_skew + self.gaussian_generator() * self.ideology_variance
             ideology += self.get_primary_offset(population.district.state, REPUBLICANS)
