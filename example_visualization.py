@@ -6,7 +6,7 @@ Example script demonstrating the visualization capabilities of the congressional
 import os
 from congressional_simulation import CongressionalSimulation
 from simulation_base.simulation_config import CongressionalSimulationConfigFactory
-from simulation_base.gaussian_generator import GaussianGenerator, set_seed
+from simulation_base.gaussian_generator import GaussianGenerator
 from visualization import create_all_visualizations, plot_winner_ideology_histogram
 
 
@@ -15,7 +15,6 @@ def main():
     print("=== Congressional Election Simulation with Visualizations ===")
     
     # Set seed for reproducibility
-    set_seed(12345)
     gaussian_generator = GaussianGenerator(12345)
     
     # Create simulation config

@@ -3,7 +3,6 @@ Combined population representing multiple voter groups.
 """
 from dataclasses import dataclass
 from typing import List, Dict, Optional
-import random
 
 from simulation_base.district_voting_record import DistrictVotingRecord
 from .population_group import PopulationGroup
@@ -27,7 +26,7 @@ class CombinedPopulation:
         }
         self.summed_weight: float = sum(p.weight for p in self.populations)
         # Initialize private GaussianGenerator with seed
-        self._gaussian_generator = GaussianGenerator(self.seed)
+        self._gaussian_generator = GaussianGenerator()
         self.sample_population: List[Voter] = self._population_sample(self.desired_samples)
         self.sample_population.sort(key=lambda v: v.ideology)
         self.median_voter: float = self.sample_population[len(self.sample_population) // 2].ideology
@@ -119,7 +118,7 @@ class CombinedPopulation:
     
     def _weighted_population(self) -> PopulationGroup:
         """Select a population group based on weights."""
-        r = random.random() * self.summed_weight
+        r = self._gaussian_generator.next_float() * self.summed_weight
         for p in self.populations:
             if r <= p.weight:
                 return p

@@ -5,7 +5,7 @@ import argparse
 import os
 import sys
 from .simulation_config import CongressionalSimulationConfigFactory
-from .gaussian_generator import GaussianGenerator, set_seed
+from .gaussian_generator import GaussianGenerator
 
 
 def parse_simulation_args(description: str = "Simulate congressional elections") -> argparse.ArgumentParser:
@@ -131,12 +131,6 @@ def setup_simulation(args: argparse.Namespace) -> tuple:
     if not os.path.exists(args.data_file):
         print(f"Error: Data file '{args.data_file}' not found")
         sys.exit(1)
-    
-    # Set random seed if provided
-    if args.seed is not None:
-        set_seed(args.seed)
-        if args.verbose:
-            print(f"Using random seed: {args.seed}")
     
     # Create simulation configuration
     gaussian_generator = GaussianGenerator(args.seed)

@@ -127,15 +127,15 @@ def create_composable_election(election_spec: Dict[str, Any], args: argparse.Nam
     return ComposableElection(primary_process, general_process, debug=debug)
 
 
-def create_population(partisan_lean: int, seed: int, nvoters: int) -> CombinedPopulation:
+def create_population(partisan_lean: int, nvoters: int) -> CombinedPopulation:
     """Create a population with the given partisan lean and seed."""
     dvr = DistrictVotingRecord.create_dummy(lean=partisan_lean, district_name="XX-01")
-    return UnitPopulation.create(dvr=dvr, n_voters=nvoters, seed=seed)
+    return UnitPopulation.create(dvr=dvr, n_voters=nvoters)
 
 
-def create_candidates(population: Any, seed: int, args: Dict[str, Any]) -> List[Any]:
+def create_candidates(population: Any, args: Dict[str, Any]) -> List[Any]:
     """Create candidates for the population."""
-    gaussian_generator = GaussianGenerator(seed)
+    gaussian_generator = GaussianGenerator()
     candidate_generator = NormalPartisanCandidateGenerator(
         n_partisan_candidates=args.candidates,
         ideology_variance=args.ideology_variance,
@@ -196,13 +196,12 @@ def name_from_election_config(election_config: Dict[str, Any]) -> str:
 def run_comparison(partisan_lean: int, iteration: int, election_types: List[Dict[str, Any]], 
                   args: argparse.Namespace) -> List[ComparisonResult]:
     """Run comparison for a single partisan lean and iteration."""
-    seed = args.seed + partisan_lean + iteration
     results = []
     
     # Create identical population and candidates for all election types
-    gaussian_generator = GaussianGenerator(seed)
-    population = create_population(partisan_lean, seed, args.nvoters)
-    candidates = create_candidates(population, seed, args)
+    gaussian_generator = GaussianGenerator()
+    population = create_population(partisan_lean, args.nvoters)
+    candidates = create_candidates(population, args)
     config = ElectionConfig(uncertainty=args.uncertainty)
     ballots = create_ballots(population.voters, candidates, config, gaussian_generator)
     

@@ -17,7 +17,7 @@ from simulation_base.population_tag import DEMOCRATS, REPUBLICANS, INDEPENDENTS
 from simulation_base.unit_population import UnitPopulation
 from simulation_base.election_config import ElectionConfig
 from simulation_base.election_with_primary import ElectionWithPrimary
-from simulation_base.gaussian_generator import GaussianGenerator, set_seed
+from simulation_base.gaussian_generator import GaussianGenerator
 from simulation_base.election_process import ElectionProcess
 from simulation_base.condorcet_election import CondorcetElection
 from simulation_base.district_voting_record import DistrictVotingRecord
@@ -254,7 +254,6 @@ def main():
     args = parser.parse_args()
     
     # Setup
-    set_seed(args.seed)
     gaussian_generator = GaussianGenerator(args.seed)
     
     # Create election configuration
