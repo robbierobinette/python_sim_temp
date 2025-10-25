@@ -10,7 +10,6 @@ from .combined_population import CombinedPopulation
 from .population_group import PopulationGroup
 from .population_tag import PopulationTag, DEMOCRATS, REPUBLICANS, INDEPENDENTS
 from .gaussian_generator import GaussianGenerator
-from .district_voting_record import DistrictVotingRecord
 
 
 class CandidateGenerator(ABC):

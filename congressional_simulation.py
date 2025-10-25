@@ -1,7 +1,6 @@
 """
 Congressional simulation for all 435 districts.
 """
-import csv
 import json
 from typing import List, Dict, Optional
 from dataclasses import dataclass, asdict
@@ -13,7 +12,6 @@ from simulation_base.election_with_primary import ElectionWithPrimary, ElectionW
 from simulation_base.condorcet_election import CondorcetElection
 from simulation_base.gaussian_generator import GaussianGenerator
 from simulation_base.election_result import ElectionResult
-from simulation_base.election_process import ElectionProcess
 from simulation_base.actual_custom_election import ActualCustomElection
 from simulation_base.ballot import RCVBallot
 from simulation_base.cook_political_data import CookPoliticalData

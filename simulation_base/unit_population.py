@@ -1,7 +1,6 @@
 """
 Unit population generation for simulation.
 """
-from typing import Optional
 
 from simulation_base.gaussian_generator import GaussianGenerator
 from .combined_population import CombinedPopulation

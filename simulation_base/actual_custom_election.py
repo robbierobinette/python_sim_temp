@@ -7,7 +7,7 @@ from .election_process import ElectionProcess
 from .election_result import ElectionResult
 from .candidate import Candidate
 from .ballot import RCVBallot
-from .composable_election import ComposableElection, ComposableElectionResult
+from .composable_election import ComposableElection
 from .closed_primary import ClosedPrimary
 from .open_primary import OpenPrimary
 from .topn_primary import TopNPrimary

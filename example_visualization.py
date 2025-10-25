@@ -30,7 +30,7 @@ def main():
     result = simulation.simulate_all_districts(districts)
     
     # Print summary
-    print(f"\n=== Results Summary ===")
+    print("\n=== Results Summary ===")
     print(f"Total Districts: {result.total_districts}")
     print(f"Democratic Wins: {result.democratic_wins} ({result.democratic_percentage:.1f}%)")
     print(f"Republican Wins: {result.republican_wins} ({result.republican_percentage:.1f}%)")
@@ -41,7 +41,7 @@ def main():
     print(f"Average Voter Satisfaction: {avg_satisfaction:.3f}")
     
     # Generate visualizations
-    print(f"\n=== Generating Visualizations ===")
+    print("\n=== Generating Visualizations ===")
     
     # Create output directory
     output_dir = "example_plots"
@@ -54,13 +54,13 @@ def main():
                                 show_plots=False)
         
         print(f"✓ All visualizations saved to {output_dir}/")
-        print(f"  - winner_ideology_histogram.png")
-        print(f"  - voter_satisfaction_histogram.png") 
-        print(f"  - ideology_vs_satisfaction.png")
-        print(f"  - party_wins_by_state.png")
+        print("  - winner_ideology_histogram.png")
+        print("  - voter_satisfaction_histogram.png") 
+        print("  - ideology_vs_satisfaction.png")
+        print("  - party_wins_by_state.png")
         
         # Also generate just the histogram as an example
-        print(f"\nGenerating individual histogram example...")
+        print("\nGenerating individual histogram example...")
         plot_winner_ideology_histogram(result,
                                      save_path=os.path.join(output_dir, "example_histogram.png"),
                                      show_plot=False)
@@ -73,7 +73,7 @@ def main():
     except Exception as e:
         print(f"✗ Error generating visualizations: {e}")
     
-    print(f"\n=== Example completed! ===")
+    print("\n=== Example completed! ===")
     print(f"Check the {output_dir}/ directory for generated plots.")
 
 

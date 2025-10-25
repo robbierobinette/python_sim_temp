@@ -2,7 +2,7 @@
 Combined population representing multiple voter groups.
 """
 from dataclasses import dataclass
-from typing import List, Dict, Optional
+from typing import List, Dict
 
 from simulation_base.district_voting_record import DistrictVotingRecord
 from .population_group import PopulationGroup

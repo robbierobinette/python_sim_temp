@@ -70,7 +70,6 @@ class CongressionalSimulationConfigFactory:
         candidate_generator_type = params['candidate_generator_type']
         election_type = params['election_type']
         ideology_variance = params['ideology_variance']
-        spread = params['spread']
         quality_variance = params['quality_variance']
         condorcet_variance = params['condorcet_variance']
         partisan_shift = params['partisan_shift']
