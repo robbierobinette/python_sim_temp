@@ -32,8 +32,8 @@ def main():
     
       
     # Ideology distribution
-    avg_ideology = sum(dr.winner_ideology for dr in result.district_results) / len(result.district_results)
-    print(f"Average winner ideology: {avg_ideology:.2f}")
+    avg_satisfaction = sum(dr.voter_satisfaction for dr in result.district_results) / len(result.district_results)
+    print(f"Average voter satisfaction: {avg_satisfaction:.2f}")
     
     # Median candidate wins
     median_wins = sum(1 for dr in result.district_results if dr.winner_name.startswith("C-"))
