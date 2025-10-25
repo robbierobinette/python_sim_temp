@@ -10,7 +10,7 @@ import argparse
 from typing import List
 from simulation_base.actual_custom_election import ActualCustomElection
 from simulation_base.candidate import Candidate
-from simulation_base.candidate_generator import CandidateGenerator, NormalPartisanCandidateGenerator, PartisanCandidateGenerator, CondorcetCandidateGenerator
+from simulation_base.candidate_generator import CandidateGenerator, NormalPartisanCandidateGenerator, CondorcetCandidateGenerator
 from simulation_base.combined_population import CombinedPopulation
 from simulation_base.instant_runoff_election import InstantRunoffElection
 from simulation_base.population_tag import DEMOCRATS, REPUBLICANS, INDEPENDENTS
@@ -184,7 +184,7 @@ def create_election_process(election_type: str, district: DistrictVotingRecord, 
         return InstantRunoffElection(debug=False)
     elif election_type == 'condorcet':
         return CondorcetElection(debug=False)
-    elif election_type == 'top2':
+    elif election_type == 'top-2':
         # use california as the state for the top-2 election
         return ActualCustomElection(state_abbr='CA', primary_skew=primary_skew, debug=True)
     elif election_type == 'custom':
@@ -212,7 +212,7 @@ def main():
                        help='Enable verbose output')
     
     # Election configuration
-    parser.add_argument('--election-type', choices=['primary', 'irv', 'condorcet', 'custom', 'top2'],
+    parser.add_argument('--election-type', choices=['primary', 'irv', 'condorcet', 'custom', 'top-2'],
                        default='primary',
                        help='Type of election to run')
     parser.add_argument('--primary-skew', type=float, default=0.0,

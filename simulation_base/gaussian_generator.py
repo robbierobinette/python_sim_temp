@@ -17,19 +17,16 @@ class GaussianGenerator:
         global _global_seed
         if _global_seed is None:
             if seed is None:
-                # if no seed is provided, use a random seed
+                # if no seed is provided, use a randomly generated seed
                 seed = random.randint(0, 1000000)
+                # print the seed used so that these results can be reproduced
                 print(f"GaussianGenerator: random seed: {seed}")
-            else:
-                print(f"GaussianGenerator: fixed seed: {seed}")
-
             self._random = random.Random(seed)
             _global_seed = seed
         else:
             # already created a generator, so increment whatever seed we are using
             _global_seed += 1
             self._random = random.Random(_global_seed)
-            print(f"GaussianGenerator: incremented seed: {_global_seed}")
 
     def next_boolean(self) -> bool:
         """Generate random boolean."""
@@ -47,4 +44,10 @@ class GaussianGenerator:
         """Generate Gaussian random number."""
         v = self._random.gauss(0, 1)
         return v
+
+    @staticmethod
+    def reset_global_seed() -> None:
+        """Reset the global seed."""
+        global _global_seed
+        _global_seed = None
 

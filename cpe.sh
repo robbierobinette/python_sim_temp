@@ -6,7 +6,7 @@ mkdir -p $odir
 
 python generate_current_results.py --output out/results-current.json
 
-for e in primary irv condorcet custom; do
+for e in primary irv condorcet custom top-2; do
 	skew=0.0
 	candidates=2
 	uncertainty=0.5

@@ -115,17 +115,19 @@ class OpenPrimaryResult(ElectionResult):
 class OpenPrimary(ElectionProcess):
     """Open primary election process where voters can vote in any primary."""
     
-    def __init__(self, use_runoff: bool, primary_skew: float, debug: bool = False):
+    def __init__(self, use_runoff: bool, primary_skew: float, debug: bool, semi_closed: bool):
         """Initialize open primary election.
         
         Args:
             use_runoff: use a runoff
             primary_skew: skew primary voters to be more partisan.
             debug: Whether to enable debug output
+            semi_closed: If True, prevent cross-party voting (Democrats can't vote in Rep primary and vice versa)
         """
         self.use_runoff = use_runoff
         self.primary_skew = primary_skew
         self.debug = debug
+        self.semi_closed = semi_closed
     
     @property
     def name(self) -> str:
@@ -143,7 +145,8 @@ class OpenPrimary(ElectionProcess):
             OpenPrimaryResult with winners from both party primaries
         """
         if self.debug:
-            print(f"Running open primary with runoff: {self.use_runoff}, skew: {self.primary_skew}")
+            primary_type = "semi-closed" if self.semi_closed else "open"
+            print(f"Running {primary_type} primary with runoff: {self.use_runoff}, skew: {self.primary_skew}")
         
         # Filter candidates by party
         dem_candidates = [c for c in candidates if c.tag == DEMOCRATS]
@@ -172,10 +175,27 @@ class OpenPrimary(ElectionProcess):
             if ballot.voter.party.tag == INDEPENDENTS and gaussian_generator.next_float() > .45:
                 continue
             first_choice = ballot.sorted_candidates[0].candidate
-            if first_choice.tag == DEMOCRATS:
-                dem_ballots.append(ballot)
-            elif first_choice.tag == REPUBLICANS:
-                rep_ballots.append(ballot)
+            
+            # In semi-closed primaries, prevent cross-party voting
+            if self.semi_closed:
+                # Democrats can only vote for Democratic candidates
+                if ballot.voter.party.tag == DEMOCRATS and first_choice.tag == DEMOCRATS:
+                    dem_ballots.append(ballot)
+                # Republicans can only vote for Republican candidates
+                elif ballot.voter.party.tag == REPUBLICANS and first_choice.tag == REPUBLICANS:
+                    rep_ballots.append(ballot)
+                # Independents can vote for any candidate
+                elif ballot.voter.party.tag == INDEPENDENTS:
+                    if first_choice.tag == DEMOCRATS:
+                        dem_ballots.append(ballot)
+                    elif first_choice.tag == REPUBLICANS:
+                        rep_ballots.append(ballot)
+            else:
+                # Open primary: voters can vote for any candidate
+                if first_choice.tag == DEMOCRATS:
+                    dem_ballots.append(ballot)
+                elif first_choice.tag == REPUBLICANS:
+                    rep_ballots.append(ballot)
         
         if self.debug:
             print(f"Ballots assigned to Democratic primary: {len(dem_ballots)}")

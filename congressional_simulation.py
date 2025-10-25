@@ -89,7 +89,9 @@ class CongressionalSimulation:
     def simulate_district(self, district: DistrictVotingRecord) -> DistrictResult:
         """Simulate election for a single district."""
         # Create election process based on election type and state
-        if self.election_type == "primary":
+        if self.election_type == "top-2":
+            election_process = ActualCustomElection(state_abbr='CA', primary_skew=self.config.primary_skew, debug=False)
+        elif self.election_type == "primary":
             election_process = ElectionWithPrimary(primary_skew=self.config.primary_skew, debug=False)
         elif self.election_type == "condorcet":
             election_process = CondorcetElection(debug=False)

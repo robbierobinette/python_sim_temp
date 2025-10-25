@@ -109,7 +109,7 @@ class ClosedPrimaryResult(ElectionResult):
 class ClosedPrimary(ElectionProcess):
     """Closed primary election process with separate Democratic and Republican primaries."""
     
-    def __init__(self, use_runoff: bool, primary_skew: float, debug: bool = False):
+    def __init__(self, use_runoff: bool, primary_skew: float, debug: bool):
         """Initialize closed primary election.
         
         Args:

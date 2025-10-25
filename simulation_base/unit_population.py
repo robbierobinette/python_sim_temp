@@ -2,6 +2,8 @@
 Unit population generation for simulation.
 """
 from typing import Optional
+
+from simulation_base.gaussian_generator import GaussianGenerator
 from .combined_population import CombinedPopulation
 from .population_group import PopulationGroup
 from .population_tag import REPUBLICANS, DEMOCRATS, INDEPENDENTS
@@ -27,37 +29,37 @@ class UnitPopulation:
         return 1.0
     
     @staticmethod
-    def create(dvr: DistrictVotingRecord, n_voters: int, seed: int) -> CombinedPopulation:
+    def create(dvr: DistrictVotingRecord, n_voters: int, gaussian_generator: GaussianGenerator) -> CombinedPopulation:
         """Create population with default parameters."""
         return UnitPopulation.create_with_params(
             dvr, UnitPopulation.default_partisanship(), 
             UnitPopulation.default_stddev(), 
             UnitPopulation.default_skew(), 
             n_voters,
-            seed=seed
+            gaussian_generator
         )
     
     @staticmethod
     def create_with_params(dvr: DistrictVotingRecord, partisanship: float, 
-                          stddev: float, skew_factor: float, n_voters: int, seed: int) -> CombinedPopulation:
+                          stddev: float, skew_factor: float, n_voters: int, gaussian_generator: GaussianGenerator) -> CombinedPopulation:
         """Create population with specified parameters."""
         return UnitPopulation.create_from_lean(
-            dvr, dvr.expected_lean, partisanship, stddev, skew_factor, n_voters, seed
+            dvr, dvr.expected_lean, partisanship, stddev, skew_factor, n_voters, gaussian_generator
         )
     
     @staticmethod
     def create_from_lean(dvr: DistrictVotingRecord, lean: float, partisanship: float, stddev: float, 
-                        skew_factor: float, n_voters: int, seed: Optional[int] = None) -> CombinedPopulation:
+                        skew_factor: float, n_voters: int, gaussian_generator: GaussianGenerator) -> CombinedPopulation:
         """Create population from lean value."""
         r_pct = 0.5 + (lean / 2 / 100)
         d_pct = 0.5 - (lean / 2 / 100)
         return UnitPopulation.create_from_percentages(
-            dvr, d_pct, r_pct, partisanship, stddev, skew_factor, n_voters, seed
+            dvr, d_pct, r_pct, partisanship, stddev, skew_factor, n_voters, gaussian_generator
         )
     
     @staticmethod
     def create_from_percentages(dvr: DistrictVotingRecord, d_pct: float, r_pct: float, partisanship: float,
-                               stddev: float, skew_factor: float, n_voters: int, seed: Optional[int] = None) -> CombinedPopulation:
+                               stddev: float, skew_factor: float, n_voters: int, gaussian_generator: GaussianGenerator) -> CombinedPopulation:
         """Create population from party percentages."""
         i_weight = 0.20
         r_weight = max(0.05, (1 - i_weight) * r_pct)
@@ -91,4 +93,4 @@ class UnitPopulation:
             weight=i_weight * 100
         )
         
-        return CombinedPopulation([rep, dem, ind], dvr, n_voters, seed)
+        return CombinedPopulation([rep, dem, ind], dvr, n_voters, gaussian_generator)

@@ -71,7 +71,7 @@ class TopNPrimaryResult(ElectionResult):
 class TopNPrimary(ElectionProcess):
     """Top-N primary election process where all voters vote in the same primary."""
     
-    def __init__(self, n: int, primary_skew: float, debug: bool = False):
+    def __init__(self, n: int, primary_skew: float, debug: bool):
         """Initialize top-N primary election.
         
         Args:

@@ -43,7 +43,7 @@
   },
   "Connecticut": {
     "abbr": "CT",
-    "primary": "closed-partisan",
+    "primary": "semi-closed-partisan",
     "primary_runoff": false,
     "general": "plurality",
     "general_runoff": false
@@ -78,7 +78,7 @@
   },
   "Idaho": {
     "abbr": "ID",
-    "primary": "closed-partisan",
+    "primary": "semi-closed-partisan",
     "primary_runoff": false,
     "general": "plurality",
     "general_runoff": false
@@ -134,7 +134,7 @@
   },
   "Maryland": {
     "abbr": "MD",
-    "primary": "closed-partisan",
+    "primary": "semi-closed-partisan",
     "primary_runoff": false,
     "general": "plurality",
     "general_runoff": false
@@ -246,14 +246,14 @@
   },
   "Oklahoma": {
     "abbr": "OK",
-    "primary": "closed-partisan",
+    "primary": "semi-closed-partisan",
     "primary_runoff": true,
     "general": "plurality",
     "general_runoff": false
   },
   "Oregon": {
     "abbr": "OR",
-    "primary": "closed-partisan",
+    "primary": "semi-closed-partisan",
     "primary_runoff": false,
     "general": "plurality",
     "general_runoff": false
@@ -281,8 +281,8 @@
   },
   "South Dakota": {
     "abbr": "SD",
-    "primary": "closed-partisan",
-    "primary_runoff": false,
+    "primary": "semi-closed-partisan",
+    "primary_runoff": true,
     "general": "plurality",
     "general_runoff": false
   },
@@ -302,7 +302,7 @@
   },
   "Utah": {
     "abbr": "UT",
-    "primary": "closed-partisan",
+    "primary": "semi-closed-partisan",
     "primary_runoff": false,
     "general": "plurality",
     "general_runoff": false
@@ -330,7 +330,7 @@
   },
   "West Virginia": {
     "abbr": "WV",
-    "primary": "closed-partisan",
+    "primary": "semi-closed-partisan",
     "primary_runoff": false,
     "general": "plurality",
     "general_runoff": false

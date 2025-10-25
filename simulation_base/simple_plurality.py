@@ -55,7 +55,7 @@ class SimplePluralityResult(ElectionResult):
 class SimplePlurality(ElectionProcess):
     """Simple plurality voting election process."""
     
-    def __init__(self, debug: bool = False):
+    def __init__(self, debug: bool):
         """Initialize simple plurality election."""
         self.debug = debug
     

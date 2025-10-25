@@ -27,6 +27,7 @@ from typing import List, Dict
 from dataclasses import dataclass, asdict
 
 # Import simulation modules
+from simulation_base.gaussian_generator import GaussianGenerator
 from simulation_base.unit_population import UnitPopulation
 from simulation_base.combined_population import CombinedPopulation
 from simulation_base.cook_political_data import CookPoliticalData
@@ -140,9 +141,10 @@ def generate_actual_results(members: List[Dict]) -> CongressionalSimulationResul
             continue
             
         dvr = dvr_map[district_name]
+        gaussian_generator = GaussianGenerator()
         
         # Create population for this district
-        population = UnitPopulation.create(dvr, n_voters=1000, seed=0)
+        population = UnitPopulation.create(dvr, n_voters=1000, gaussian_generator=gaussian_generator)
         
         # Calculate voter satisfaction
         satisfaction = calculate_voter_satisfaction(member, population)

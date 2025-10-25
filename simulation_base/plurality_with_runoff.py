@@ -12,7 +12,7 @@ from .simple_plurality import SimplePlurality
 class PluralityWithRunoff(ElectionProcess):
     """Plurality with runoff voting election process."""
     
-    def __init__(self, debug: bool = False):
+    def __init__(self, debug: bool):
         """Initialize with a SimplePlurality instance."""
         self.simple_plurality = SimplePlurality(debug=debug)
         self.debug = debug

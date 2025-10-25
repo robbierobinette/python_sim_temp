@@ -20,7 +20,7 @@ from .condorcet_election import CondorcetElection
 class ActualCustomElection(ElectionProcess):
     """Custom election process that uses state-specific election configurations."""
     
-    def __init__(self, state_abbr: str, primary_skew: float = 0.0, debug: bool = False):
+    def __init__(self, state_abbr: str, primary_skew: float, debug: bool):
         """Initialize ActualCustom election.
         
         Args:
@@ -108,7 +108,8 @@ class ActualCustomElection(ElectionProcess):
             return OpenPrimary(
                 use_runoff=primary_runoff, 
                 primary_skew=self.primary_skew, 
-                debug=self.debug
+                debug=self.debug,
+                semi_closed=False
             )
         elif primary_type == "top-2":
             return TopNPrimary(n=2, primary_skew=self.primary_skew, debug=self.debug)
@@ -117,11 +118,11 @@ class ActualCustomElection(ElectionProcess):
         elif primary_type == "top-5":
             return TopNPrimary(n=5, primary_skew=self.primary_skew, debug=self.debug)
         elif primary_type == "semi-closed-partisan":
-            # For now, treat semi-closed as closed
-            return ClosedPrimary(
+            return OpenPrimary(
                 use_runoff=primary_runoff, 
                 primary_skew=self.primary_skew, 
-                debug=self.debug
+                debug=self.debug,
+                semi_closed=True
             )
     
     def _create_general_process(self) -> ElectionProcess:

@@ -41,7 +41,7 @@ class CandidateGenerator(ABC):
         # Ensure election types are loaded
         self._load_election_types()
     
-    def get_primary_offset(self, state_abbr: str, party_tag: PopulationTag) -> float:
+    def get_primary_offset(self, state_abbr: str, party_tag: PopulationTag, election_type: str) -> float:
         """
         Get the primary offset for a given state and party.
         
@@ -58,21 +58,20 @@ class CandidateGenerator(ABC):
         Returns:
             The offset value for the primary
         """
-        self._load_election_types()
-        
-        # Get election info for the state
-        state_info = self._election_types_by_state.get(state_abbr)
-        if not state_info:
+
+        if election_type == "custom":
+            self._load_election_types()
+            state_info = self._election_types_by_state.get(state_abbr)
+            primary_type = state_info['primary']
+            has_runoff = state_info['primary_runoff']
+        elif election_type == "top-2":
+            primary_type = "top-2"
+            has_runoff = False
+        else:
             return 0.0
+
         
-        primary_type = state_info.get('primary', '')
-        has_runoff = state_info.get('primary_runoff', False)
-        
-        # Check if condition applies: top-2 OR (open AND no runoff)
-        is_top2 = primary_type == 'top-2'
-        is_open_no_runoff = 'open' in primary_type and not has_runoff
-        
-        if is_top2 or is_open_no_runoff:
+        if primary_type == "top-2" or (primary_type == "open" and not has_runoff):
             if party_tag == REPUBLICANS:
                 return -0.2
             elif party_tag == DEMOCRATS:
@@ -81,7 +80,7 @@ class CandidateGenerator(ABC):
         return 0.0
     
     @abstractmethod
-    def candidates(self, population: CombinedPopulation) -> List[Candidate]:
+    def candidates(self, population: CombinedPopulation, election_type: str) -> List[Candidate]:
         """Generate candidates for a population."""
         pass
     
@@ -124,72 +123,6 @@ class CandidateGenerator(ABC):
         )
 
 
-class PartisanCandidateGenerator(CandidateGenerator):
-    """Generates partisan candidates."""
-    
-    def __init__(self, 
-                    n_party_candidates: int, 
-                    spread: float, 
-                    ideology_variance: float, 
-                    median_variance: float,
-                    quality_variance: float, 
-                    primary_skew: float,
-                    gaussian_generator: GaussianGenerator):
-        """Initialize partisan candidate generator."""
-        super().__init__(quality_variance)
-        self.n_party_candidates = n_party_candidates
-        self.spread = spread
-        self.ideology_variance = ideology_variance
-        self.primary_skew = primary_skew
-        self.median_variance = median_variance
-        self.gaussian_generator = gaussian_generator
-    
-    def get_partisan_candidates(self, population_group: PopulationGroup, dvr: DistrictVotingRecord, n_candidates: int) -> List[Candidate]:
-        """Generate partisan candidates for a population group."""
-        skew = self.primary_skew if population_group.tag == REPUBLICANS else -self.primary_skew
-        party_base = population_group.mean + skew + self.get_primary_offset(dvr.state, population_group.tag)
-        offset = self.spread * population_group.stddev * (1 if population_group.tag == REPUBLICANS else -1)
-        
-        # Generate ideologies based on number of candidates
-        if n_candidates == 1:
-            ideologies = [party_base]
-        elif n_candidates == 2:
-            ideologies = [party_base - offset, party_base + offset]
-        else:  # 3 or more candidates
-            ideologies = [party_base - offset, party_base, party_base + offset]
-            # Add more candidates if needed
-            if n_candidates > 3:
-                step = (2 * offset) / (n_candidates - 1)
-                ideologies = [party_base - offset + i * step for i in range(n_candidates)]
-        
-        candidates = []
-        for idx, ideology in enumerate(ideologies):
-            candidate = Candidate(
-                name=f"{population_group.tag.initial}-{idx + 1}",
-                tag=population_group.tag,
-                ideology=ideology + self.gaussian_generator() * self.ideology_variance,
-                quality=self.gaussian_generator() * self.quality_variance,
-                incumbent=False,
-            )
-            candidates.append(candidate)
-        
-        return candidates
-    
-    def candidates(self, population: CombinedPopulation) -> List[Candidate]:
-        """Generate all candidates for the population."""
-        reps = self.get_partisan_candidates(population.republicans, population.district, self.n_party_candidates)
-        dems = self.get_partisan_candidates(population.democrats, population.district, self.n_party_candidates)
-        median = self.get_median_candidate(population, self.median_variance, self.gaussian_generator)
-
-        if median.tag == DEMOCRATS:
-            dems = dems[1:]
-        elif median.tag == REPUBLICANS:
-            reps = reps[1:]
-        else:
-            raise ValueError(f"Median candidate has invalid tag: {median.tag}")
-        
-        return dems + [median] + reps
-
 
 class NormalPartisanCandidateGenerator(CandidateGenerator):
     """Generates partisan candidates from normal distributions with a median candidate."""
@@ -200,8 +133,7 @@ class NormalPartisanCandidateGenerator(CandidateGenerator):
                 primary_skew: float,
                 median_variance: float,
                 gaussian_generator: GaussianGenerator,
-                n_condorcet: int = 1,
-):
+                n_condorcet: int):
         """Initialize normal partisan candidate generator."""
         super().__init__(quality_variance)
         self.n_partisan_candidates = n_partisan_candidates
@@ -211,7 +143,7 @@ class NormalPartisanCandidateGenerator(CandidateGenerator):
         self.gaussian_generator = gaussian_generator
         self.n_condorcet = n_condorcet
     
-    def candidates(self, population: CombinedPopulation) -> List[Candidate]:
+    def candidates(self, population: CombinedPopulation, election_type: str) -> List[Candidate]:
         """Generate all candidates for the population."""
         candidates = []
 
@@ -219,7 +151,7 @@ class NormalPartisanCandidateGenerator(CandidateGenerator):
         for i in range(self.n_partisan_candidates):
             # Draw from normal distribution centered at Democratic mean
             ideology = population.democrats.mean - self.primary_skew + self.gaussian_generator() * self.ideology_variance 
-            ideology += self.get_primary_offset(population.district.state, DEMOCRATS)
+            ideology += self.get_primary_offset(population.district.state, DEMOCRATS, election_type)
             candidate = Candidate(
                 name=f"D-{i + 1}",
                 tag=DEMOCRATS,
@@ -239,7 +171,7 @@ class NormalPartisanCandidateGenerator(CandidateGenerator):
         for i in range(self.n_partisan_candidates):
             # Draw from normal distribution centered at Republican mean
             ideology = population.republicans.mean + self.primary_skew + self.gaussian_generator() * self.ideology_variance
-            ideology += self.get_primary_offset(population.district.state, REPUBLICANS)
+            ideology += self.get_primary_offset(population.district.state, REPUBLICANS, election_type)
             candidate = Candidate(
                 name=f"R-{i + 1}",
                 tag=REPUBLICANS,
@@ -252,95 +184,8 @@ class NormalPartisanCandidateGenerator(CandidateGenerator):
         return candidates
 
 
-class RankCandidateGenerator(CandidateGenerator):
-    """Generates candidates based on rank distribution."""
-    
-    def __init__(self, n_party_candidates: int, spread: float, offset: float,
-                 ideology_variance: float, quality_variance: float, median_variance: float,
-                 gaussian_generator: GaussianGenerator):
-        """Initialize rank candidate generator."""
-        super().__init__(quality_variance)
-        self.n_party_candidates = n_party_candidates
-        self.spread = spread
-        self.offset = offset
-        self.ideology_variance = ideology_variance
-        self.median_variance = median_variance
-        self.gaussian_generator = gaussian_generator
-    
-    def compute_ranks(self, tag: PopulationTag, offset: float, spread: float, 
-                     noise: float, n_candidates: int) -> List[float]:
-        """Compute rank positions for candidates."""
-        if n_candidates <= 1:
-            raise ValueError("Number of candidates must be greater than 1")
-        
-        step = spread / (n_candidates - 1)
-        ranks = [i * step - spread / 2 for i in range(n_candidates)]
-        
-        # Add noise
-        ranks = [r + noise * self.gaussian_generator() for r in ranks]
-        
-        # Adjust for party
-        if tag == REPUBLICANS:
-            ranks = [r + offset + 0.5 for r in ranks]
-        elif tag == DEMOCRATS:
-            ranks = [0.5 - offset - r for r in ranks]
-        
-        # Filter valid ranks
-        ranks = [r for r in ranks if 0 < r < 1]
-        return ranks
-    
-    def get_candidates_rank(self, party: PopulationGroup, population: CombinedPopulation,
-                           n_candidates: int) -> List[Candidate]:
-        """Generate candidates using rank distribution."""
-        ranks = self.compute_ranks(party.tag, self.offset, self.spread, 
-                                  self.ideology_variance, n_candidates)
-        ideologies = [population.ideology_for_percentile(r) for r in ranks]
-        ideologies.sort()
-        return self.candidates_for_ideologies(ideologies, party, self.gaussian_generator)
-    
-    def candidates(self, population: CombinedPopulation) -> List[Candidate]:
-        """Generate all candidates for the population."""
-        reps = self.get_candidates_rank(population.republicans, population, self.n_party_candidates)
-        dems = self.get_candidates_rank(population.democrats, population, self.n_party_candidates)
-        median = self.get_median_candidate(population, self.median_variance, self.gaussian_generator)
-        
-        return dems + [median] + reps
 
 
-class RandomCandidateGenerator(CandidateGenerator):
-    """Generates random candidates."""
-    
-    def __init__(self, n_candidates: int, quality_variance: float, median_variance: float, n_median_candidates: int,
-                 gaussian_generator: GaussianGenerator):
-        """Initialize random candidate generator."""
-        super().__init__(quality_variance)
-        self.n_candidates = n_candidates
-        self.n_median_candidates = n_median_candidates
-        self.median_variance = median_variance
-        self.gaussian_generator = gaussian_generator
-    
-    def candidates(self, population: CombinedPopulation) -> List[Candidate]:
-        """Generate random candidates."""
-        candidates = []
-        
-        # Generate random candidates
-        for i in range(self.n_candidates):
-            voter = population.random_voter()
-            candidate = Candidate(
-                name=f"C-{i}",
-                tag=voter.party.tag,
-                ideology=voter.ideology,
-                quality=self.gaussian_generator() * self.quality_variance,
-                incumbent=False
-            )
-            candidates.append(candidate)
-        
-        # Add median candidates
-        for _ in range(self.n_median_candidates):
-            median_candidate = self.get_median_candidate(population, self.median_variance, self.gaussian_generator)
-            candidates.append(median_candidate)
-        
-        return candidates
 
 class CondorcetCandidateGenerator(CandidateGenerator):
     """Generates Condorcet candidates distributed around the median voter."""
@@ -355,7 +200,7 @@ class CondorcetCandidateGenerator(CandidateGenerator):
         self.party_switch_point = 0.1
     
 
-    def candidates(self, population: CombinedPopulation) -> List[Candidate]:
+    def candidates(self, population: CombinedPopulation, _election_type: str) -> List[Candidate]:
         """Generate Condorcet candidates distributed around the median voter."""
         candidates = []
         median_voter_ideology = population.median_voter
@@ -368,16 +213,13 @@ class CondorcetCandidateGenerator(CandidateGenerator):
             # Determine party affiliation based on ideology
             if ideology < -self.party_switch_point:  # More very liberal
                 party_tag = DEMOCRATS
-                party_initial = "D"
             elif ideology > self.party_switch_point:  # More very conservative
                 party_tag = REPUBLICANS
-                party_initial = "R"
             else:  # Centrist
                 party_tag = INDEPENDENTS
-                party_initial = "I"
             
             candidate = Candidate(
-                name=f"{party_initial}-{i + 1}",
+                name="XX",
                 tag=party_tag,
                 ideology=ideology,
                 quality=self.gaussian_generator() * self.quality_variance,
@@ -386,8 +228,8 @@ class CondorcetCandidateGenerator(CandidateGenerator):
             candidates.append(candidate)
         
         # Sort candidates by ideology
-        candidates.sort(key=lambda c: c.ideology)
-        # Rename candidates to be their party-letter and then their order from very liberal to very conservative (1-based)
+        candidates.sort(key=lambda c: abs(c.ideology))
+        # Rename candidates to be their party-letter and then their order from the center out to extreme
         for idx, candidate in enumerate(candidates):
             candidate.name = f"{candidate.tag.short_name[0]}-{idx + 1}"
 

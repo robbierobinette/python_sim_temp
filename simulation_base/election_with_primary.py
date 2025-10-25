@@ -52,7 +52,7 @@ class ElectionWithPrimaryResult(ElectionResult):
 class ElectionWithPrimary(ElectionProcess):
     """Election process with separate Democratic and Republican primaries."""
     
-    def __init__(self, primary_skew: float = 0.5, debug: bool = False):
+    def __init__(self, primary_skew: float, debug: bool):
         """Initialize primary election process."""
         self.primary_skew = primary_skew
         self.debug = debug

@@ -46,7 +46,7 @@ class ComposableElectionResult(ElectionResult):
 class ComposableElection(ElectionProcess):
     """Composable election process that runs a primary followed by a general election."""
     
-    def __init__(self, primary_process: ElectionProcess, general_process: ElectionProcess, debug: bool = False):
+    def __init__(self, primary_process: ElectionProcess, general_process: ElectionProcess, debug: bool):
         """Initialize composable election.
         
         Args:

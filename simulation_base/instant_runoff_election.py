@@ -58,7 +58,7 @@ class RCVResult(ElectionResult):
 class InstantRunoffElection(ElectionProcess):
     """Instant Runoff Voting election process."""
     
-    def __init__(self, debug: bool = False):
+    def __init__(self, debug: bool):
         """Initialize IRV election."""
         self.debug = debug
     

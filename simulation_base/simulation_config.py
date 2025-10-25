@@ -2,7 +2,6 @@
 Simulation configuration for congressional elections.
 """
 from dataclasses import dataclass
-from typing import Optional
 from .election_config import ElectionConfig
 from .district_voting_record import DistrictVotingRecord
 from .candidate_generator import CandidateGenerator
@@ -15,19 +14,19 @@ class PopulationConfiguration:
     partisanship: float
     stddev: float
     population_skew: float
-    seed: Optional[int] = None
 
 
 class CongressionalSimulationConfig:
     """Configuration for congressional simulation."""
     
     def __init__(self, label: str, config: ElectionConfig, pop_config: PopulationConfiguration,
-                 candidate_generator: CandidateGenerator, primary_skew: float, nvoters: int = 1000):
+                 candidate_generator: CandidateGenerator, election_type: str, primary_skew: float, nvoters: int = 1000):
         """Initialize simulation configuration."""
         self.label = label
         self.config = config
         self.pop_config = pop_config
         self.candidate_generator = candidate_generator
+        self.election_type = election_type
         self.primary_skew = primary_skew
         self.nvoters = nvoters
     
@@ -49,10 +48,9 @@ class UnitSimulationConfig(CongressionalSimulationConfig):
         
         district_pop = UnitPopulation.create_with_params(
             dvr, self.pop_config.partisanship, self.pop_config.stddev, 
-            self.pop_config.population_skew, self.nvoters, self.pop_config.seed)
+            self.pop_config.population_skew, self.nvoters, gaussian_generator)
         
-        candidates = self.candidate_generator.candidates(district_pop)
-        candidates.sort(key=lambda c: c.ideology)
+        candidates = self.candidate_generator.candidates(district_pop, self.election_type)
         
         return ElectionDefinition(candidates, district_pop, self.config, gaussian_generator, dvr.state)
 
@@ -82,7 +80,7 @@ class CongressionalSimulationConfigFactory:
             uncertainty=uncertainty,
         )
         
-        population_config = PopulationConfiguration(1, 1, partisan_shift, params.get('seed'))
+        population_config = PopulationConfiguration(1, 1, partisan_shift)
         
         # Create candidate generator based on type
         if candidate_generator_type == "condorcet":
@@ -91,15 +89,6 @@ class CongressionalSimulationConfigFactory:
                 n_candidates=candidates,  # Total number of candidates for Condorcet
                 ideology_variance=condorcet_variance,
                 quality_variance=quality_variance,
-                gaussian_generator=gaussian_generator
-            )
-        elif candidate_generator_type == "random":
-            from .candidate_generator import RandomCandidateGenerator
-            candidate_generator = RandomCandidateGenerator(
-                n_candidates=candidates,  # Total number of candidates for Random
-                quality_variance=quality_variance,
-                median_variance=condorcet_variance,
-                n_median_candidates=0,  # No median candidates for random
                 gaussian_generator=gaussian_generator
             )
         elif candidate_generator_type == "normal-partisan":
@@ -114,23 +103,11 @@ class CongressionalSimulationConfigFactory:
                 gaussian_generator=gaussian_generator,
                 n_condorcet=n_condorcet,
             )
-        else:  # partisan (default)
-            from .candidate_generator import PartisanCandidateGenerator
-            # Only use primary_skew for primary elections
-            effective_primary_skew = primary_skew if election_type == "primary" else 0.0
-            candidate_generator = PartisanCandidateGenerator(
-                n_party_candidates=candidates,  # Number per party for partisan
-                spread=spread, 
-                ideology_variance=ideology_variance, 
-                median_variance=condorcet_variance,
-                quality_variance=quality_variance,
-                primary_skew=effective_primary_skew,
-                gaussian_generator=gaussian_generator
-            )
         
         return UnitSimulationConfig(
             label="unitConfig",
             config=election_config,
+            election_type=election_type,
             pop_config=population_config,
             candidate_generator=candidate_generator,
             primary_skew=primary_skew,

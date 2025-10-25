@@ -20,7 +20,7 @@ from .plurality_with_runoff import PluralityWithRunoff
 class SmartPrimaryElection(ElectionProcess):
     """Smart primary election that creates the appropriate ComposableElection based on state."""
     
-    def __init__(self, election_types_file: str = "election_types.json", debug: bool = False):
+    def __init__(self, election_types_file: str, debug: bool):
         """Initialize smart primary election.
         
         Args:

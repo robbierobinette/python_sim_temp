@@ -20,7 +20,7 @@ def main():
     
     # Run simulation using shared runner
     simulation, result = run_simulation(
-        config, gaussian_generator, args.data_file, args.election_type, args.verbose, args.n_condorcet
+        config, gaussian_generator, args.data_file, args.election_type, args.verbose
     )
     
     # Print summary
@@ -30,30 +30,16 @@ def main():
     simulation.save_results(result, args.output)
     print(f"\nResults saved to {args.output}")
     
-    # Print some statistics
-    print("\n=== Additional Statistics ===")
-    
-    # Party distribution
-    dem_districts = [dr for dr in result.district_results if dr.winner_party == "Dem"]
-    rep_districts = [dr for dr in result.district_results if dr.winner_party == "Rep"]
-    
-    if dem_districts:
-        avg_dem_lean = sum(dr.expected_lean for dr in dem_districts) / len(dem_districts)
-        print(f"Average lean of Democratic districts: {avg_dem_lean:.1f}")
-    
-    if rep_districts:
-        avg_rep_lean = sum(dr.expected_lean for dr in rep_districts) / len(rep_districts)
-        print(f"Average lean of Republican districts: {avg_rep_lean:.1f}")
-    
+      
     # Ideology distribution
     avg_ideology = sum(dr.winner_ideology for dr in result.district_results) / len(result.district_results)
     print(f"Average winner ideology: {avg_ideology:.2f}")
     
-    # Satisfaction by party
-    dem_satisfaction = sum(dr.voter_satisfaction for dr in dem_districts) / len(dem_districts) if dem_districts else 0
-    rep_satisfaction = sum(dr.voter_satisfaction for dr in rep_districts) / len(rep_districts) if rep_districts else 0
-    print(f"Average satisfaction in Democratic districts: {dem_satisfaction:.3f}")
-    print(f"Average satisfaction in Republican districts: {rep_satisfaction:.3f}")
+    # Median candidate wins
+    median_wins = sum(1 for dr in result.district_results if dr.winner_name.startswith("C-"))
+    median_percentage = (median_wins / len(result.district_results)) * 100
+    print(f"Median candidate wins: {median_wins}/{len(result.district_results)} ({median_percentage:.1f}%)")
+    
     
     # Generate visualizations if requested
     if args.plot or args.histogram_only or args.plot_dir != "plots":

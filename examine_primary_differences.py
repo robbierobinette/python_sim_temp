@@ -127,15 +127,14 @@ def create_composable_election(election_spec: Dict[str, Any], args: argparse.Nam
     return ComposableElection(primary_process, general_process, debug=debug)
 
 
-def create_population(partisan_lean: int, nvoters: int) -> CombinedPopulation:
+def create_population(partisan_lean: int, nvoters: int, gaussian_generator: GaussianGenerator) -> CombinedPopulation:
     """Create a population with the given partisan lean and seed."""
     dvr = DistrictVotingRecord.create_dummy(lean=partisan_lean, district_name="XX-01")
-    return UnitPopulation.create(dvr=dvr, n_voters=nvoters)
+    return UnitPopulation.create(dvr=dvr, n_voters=nvoters, gaussian_generator=gaussian_generator)
 
 
-def create_candidates(population: Any, args: Dict[str, Any]) -> List[Any]:
+def create_candidates(population: Any, args: Dict[str, Any], gaussian_generator: GaussianGenerator) -> List[Any]:
     """Create candidates for the population."""
-    gaussian_generator = GaussianGenerator()
     candidate_generator = NormalPartisanCandidateGenerator(
         n_partisan_candidates=args.candidates,
         ideology_variance=args.ideology_variance,
@@ -194,14 +193,13 @@ def name_from_election_config(election_config: Dict[str, Any]) -> str:
     return f"{primary_name}-{general_name}"
 
 def run_comparison(partisan_lean: int, iteration: int, election_types: List[Dict[str, Any]], 
-                  args: argparse.Namespace) -> List[ComparisonResult]:
+                  args: argparse.Namespace, gaussian_generator: GaussianGenerator) -> List[ComparisonResult]:
     """Run comparison for a single partisan lean and iteration."""
     results = []
     
     # Create identical population and candidates for all election types
-    gaussian_generator = GaussianGenerator()
-    population = create_population(partisan_lean, args.nvoters)
-    candidates = create_candidates(population, args)
+    population = create_population(partisan_lean, args.nvoters, gaussian_generator)
+    candidates = create_candidates(population, args, gaussian_generator)
     config = ElectionConfig(uncertainty=args.uncertainty)
     ballots = create_ballots(population.voters, candidates, config, gaussian_generator)
     
@@ -342,6 +340,8 @@ def main():
     print(f"\nRunning comparisons for partisan leans: {partisan_leans}")
     print(f"Each lean will be tested {args.iterations} times with different seeds")
     print(f"Total comparisons: {len(partisan_leans)} leans × {args.iterations} iterations × {len(election_types)} types = {len(partisan_leans) * args.iterations * len(election_types)}")
+
+    gaussian_generator = GaussianGenerator(args.seed)
     
     for lean in partisan_leans:
         print(f"\nProcessing partisan lean {lean}...")
@@ -350,7 +350,7 @@ def main():
                 print(f"  Iteration {iteration + 1}/{args.iterations}")
             
             try:
-                results = run_comparison(lean, iteration, election_types, args)
+                results = run_comparison(lean, iteration, election_types, args, gaussian_generator)
                 all_results.extend(results)
             except Exception as e:
                 print(f"ERROR: Failed at lean {lean}, iteration {iteration}: {e}")
