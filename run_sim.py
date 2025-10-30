@@ -4,7 +4,6 @@ Main program to run congressional election simulation.
 
 """
 
-import sys
 from simulation_base.simulation_runner import parse_simulation_args, setup_simulation, run_simulation
 from visualization import create_all_visualizations, plot_winner_ideology_histogram
 
@@ -20,7 +19,8 @@ def main():
     
     # Run simulation using shared runner
     simulation, result = run_simulation(
-        config, gaussian_generator, args.data_file, args.election_type, args.verbose
+        config, gaussian_generator, args.data_file, args.election_type, args.verbose,
+        args.iterations, args.districts
     )
     
     # Print summary
@@ -29,11 +29,10 @@ def main():
     # Save results
     simulation.save_results(result, args.output)
     print(f"\nResults saved to {args.output}")
-    
       
     # Ideology distribution
     avg_satisfaction = sum(dr.voter_satisfaction for dr in result.district_results) / len(result.district_results)
-    print(f"Average voter satisfaction: {avg_satisfaction:.2f}")
+    print(f"{args.election_type:10s} average voter satisfaction: {avg_satisfaction:.2f}")
     
     # Median candidate wins
     median_wins = sum(1 for dr in result.district_results if dr.winner_name.startswith("C-"))

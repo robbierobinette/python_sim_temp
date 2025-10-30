@@ -229,32 +229,12 @@ class IdeologyHistogram:
         # Save to file or display based on flags
         if output_filename:
             plt.savefig(output_filename, dpi=300, bbox_inches='tight')
-            print(f"Histogram saved to {output_filename}")
         
         if display:
             plt.show()
         else:
             plt.close()  # Close the figure to free memory
         
-        # Print some statistics
-        values = [dp.value for dp in data_points]
-        print("\nStatistics:")
-        print(f"Total data points: {len(data_points)}")
-        print(f"Average value: {np.mean(values):.3f}")
-        print(f"Value range: {np.min(values):.3f} to {np.max(values):.3f}")
-        print(f"Standard deviation: {np.std(values):.3f}")
-        
-        # Color breakdown (if using labels)
-        if any(dp.label for dp in data_points):
-            label_counts = {}
-            for dp in data_points:
-                if dp.label:
-                    label_counts[dp.label] = label_counts.get(dp.label, 0) + 1
-            
-            print("\nLabel breakdown:")
-            for label, count in sorted(label_counts.items()):
-                print(f"{label}: {count} ({count/len(data_points)*100:.1f}%)")
-
 
 def load_ideology_data(filename: str, use_nominate: bool = False) -> Tuple[List[float], List[str]]:
     """Load ideology data from JSON file and return values and labels.
@@ -314,13 +294,10 @@ def main():
     
     # Adjust defaults for nominate mode
     if args.nominate:
-        print(f"Generating NOMINATE histogram from {args.json_file}...")
         # If min/max are at defaults, adjust them for nominate range
         if args.min == -2.5 and args.max == 2.5:
             args.min = -1.0
             args.max = 1.0
-    else:
-        print(f"Generating ideology histogram from {args.json_file}...")
     
     gradient_min = -1.5
     gradient_max = 1.5
@@ -339,7 +316,6 @@ def main():
     try:
         # Load data from JSON file
         values, party = load_ideology_data(args.json_file, use_nominate=args.nominate)
-        print(f"Loaded {len(values)} data points")
         
         # Check if we have any data
         if len(values) == 0:

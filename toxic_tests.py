@@ -83,6 +83,78 @@ def run_election(candidates: List[Candidate],
     # Run election with new interface
     return election_process.run(candidates, ballots)
 
+def run_twin_test(district: DistrictVotingRecord,
+                    candidate_generator: CandidateGenerator,
+                    config: ElectionConfig,
+                    gaussian_generator: GaussianGenerator,
+                    election_type: str,
+                    primary_skew: float,
+                    toxic_bonus: float,
+                    toxic_penalty: float,
+                    nvoters: int,
+                    args: argparse.Namespace) -> dict:
+    """
+    run the election with no toxic candidates or tactics, then rerun the election with
+    a toxic twin of the winner.  In the rerun, reduce the field for the original winner's party
+    to be just the toxic twin and the original winner.  
+    """
+    population = UnitPopulation.create(district, n_voters=nvoters, gaussian_generator=gaussian_generator)
+    election_process = create_election_process(election_type, district, primary_skew, args)
+    candidates = candidate_generator.candidates(population, election_type)
+
+    base_result = run_election(candidates, population, election_process, config, gaussian_generator)
+    base_winner = base_result.winner()
+    toxic_candidate = apply_toxic_tactics(base_winner, toxic_bonus, toxic_penalty)
+    new_candidates = [toxic_candidate, base_winner]
+    for candidate in candidates:
+        if candidate.tag != base_winner.tag:
+            new_candidates.append(candidate)
+    new_result = run_election(new_candidates, population, election_process, config, gaussian_generator)
+    test_result = 'success' if new_result.winner().name == toxic_candidate.name else 'failure'
+    return {
+        'district': district.district,
+        'lean': district.expected_lean,
+        'test_result': test_result,
+    }
+
+def run_non_toxic_test(district: DistrictVotingRecord,
+                 candidate_generator,
+                 config: ElectionConfig,
+                 gaussian_generator: GaussianGenerator,
+                 election_type: str,
+                 primary_skew: float,
+                 toxic_bonus: float,
+                 toxic_penalty: float,
+                 nvoters: int,
+                 args: argparse.Namespace) -> dict:
+
+    population = UnitPopulation.create(district, n_voters=nvoters, gaussian_generator=gaussian_generator)
+    election_process = create_election_process(election_type, district, primary_skew, args)
+    base_candidates = candidate_generator.candidates(population, election_type)
+    toxic_candidates = [apply_toxic_tactics(c, toxic_bonus, toxic_penalty) for c in base_candidates]
+    results = []
+    for i, c in enumerate(toxic_candidates):
+        new_candidates = toxic_candidates.copy()
+        new_candidates[i] = base_candidates[i]
+        result = run_election(new_candidates, population, election_process, config, gaussian_generator)
+        results.append(result)
+        winner = result.winner()
+        if "toxic" not in winner.name:
+            return {
+                'district': district.district,
+                'lean': district.expected_lean,
+                'test_result': 'failure',
+            }
+
+    if args.verbose:
+        print(f"Toxic Failure:  District: {district.district} Lean: {district.expected_lean}")
+
+    return {
+        'district': district.district,
+        'lean': district.expected_lean,
+        'test_result': 'success',
+    }
+
 def run_all_test(district: DistrictVotingRecord,
                  candidate_generator,
                  config: ElectionConfig,
@@ -94,9 +166,9 @@ def run_all_test(district: DistrictVotingRecord,
                  nvoters: int,
                  args: argparse.Namespace) -> dict:
 
-    population = UnitPopulation.create(district, n_voters=nvoters)
-    election_process = create_election_process(election_type, district, primary_skew)
-    candidates = candidate_generator.candidates(population)
+    population = UnitPopulation.create(district, n_voters=nvoters, gaussian_generator=gaussian_generator)
+    election_process = create_election_process(election_type, district, primary_skew, args)
+    candidates = candidate_generator.candidates(population, election_type)
     base_result = run_election(candidates, population, election_process, config, gaussian_generator)
     base_winner = base_result.winner()
     results = []
@@ -119,8 +191,6 @@ def run_all_test(district: DistrictVotingRecord,
             return {
                 'district': district.district,
                 'lean': district.expected_lean,
-                'base_winner': base_winner.name,
-                'toxic_winner': toxic_candidate.name,
                 'test_result': 'success',
             }
 
@@ -134,8 +204,6 @@ def run_all_test(district: DistrictVotingRecord,
     return {
         'district': district.district,
         'lean': district.expected_lean,
-        'base_winner': base_winner.name,
-        'toxic_winner': None,
         'test_result': 'failure',
     }
 
@@ -153,18 +221,15 @@ class BalancedCandidateFilter(CandidateGenerator):
 def create_candidate_generator(args, gaussian_generator):
     """Create candidate generator based on arguments."""
     if args.candidate_generator == 'normal-partisan':
-        cg = NormalPartisanCandidateGenerator(
+        return NormalPartisanCandidateGenerator(
             n_partisan_candidates=args.candidates,
             ideology_variance=args.ideology_variance,
             quality_variance=args.quality_variance,
             primary_skew=args.primary_skew,
             median_variance=0.0,
-            gaussian_generator=gaussian_generator
+            gaussian_generator=gaussian_generator,
+            n_condorcet=args.n_condorcet
         )
-        if args.filter_balanced_candidates:
-            return BalancedCandidateFilter(cg)
-        else:
-            return cg
     elif args.candidate_generator == 'condorcet':
         return CondorcetCandidateGenerator(
             n_candidates=args.candidates,
@@ -176,19 +241,19 @@ def create_candidate_generator(args, gaussian_generator):
         raise ValueError(f"Unknown candidate generator: {args.candidate_generator}")
 
 
-def create_election_process(election_type: str, district: DistrictVotingRecord, primary_skew: float) -> ElectionProcess:
+def create_election_process(election_type: str, district: DistrictVotingRecord, primary_skew: float, args: argparse.Namespace) -> ElectionProcess:
     """Create election process based on arguments."""
     if election_type == 'primary':
-        return ElectionWithPrimary(primary_skew=primary_skew, debug=False)
+        return ElectionWithPrimary(primary_skew=primary_skew, debug=args.verbose)
     elif election_type == 'irv':
-        return InstantRunoffElection(debug=False)
+        return InstantRunoffElection(debug=args.verbose)
     elif election_type == 'condorcet':
-        return CondorcetElection(debug=False)
+        return CondorcetElection(debug=args.verbose)
     elif election_type == 'top-2':
         # use california as the state for the top-2 election
-        return ActualCustomElection(state_abbr='CA', primary_skew=primary_skew, debug=True)
+        return ActualCustomElection(state_abbr='CA', primary_skew=primary_skew, debug=args.verbose)
     elif election_type == 'custom':
-        return ActualCustomElection(state_abbr=district.state, primary_skew=primary_skew, debug=False)
+        return ActualCustomElection(state_abbr=district.state, primary_skew=primary_skew, debug=args.verbose)
     else:
         raise ValueError(f"Unknown election type: {election_type}")
 
@@ -197,7 +262,7 @@ def print_stats(label: str, stats: {}):
     successes = stats['successes']
     failures = stats['failures']
     total_districts = successes + failures
-    print(f"{label}: {successes}/{total_districts} ({successes/total_districts*100:.1f}%)")
+    print(f"{label}: toxic success: {successes:4d}/{total_districts:4d} ({successes/total_districts*100:4.1f}%)")
 
 def main():
     """Run twin test across all congressional districts."""
@@ -215,6 +280,8 @@ def main():
     parser.add_argument('--election-type', choices=['primary', 'irv', 'condorcet', 'custom', 'top-2'],
                        default='primary',
                        help='Type of election to run')
+    parser.add_argument('--test-type', choices=['twin', 'non-toxic', 'toxic'],
+                        default='toxic', help='type of test to run, default is toxic')
     parser.add_argument('--primary-skew', type=float, default=0.0,
                        help='Primary election skew factor')
     parser.add_argument('--uncertainty', type=float, default=0.5,
@@ -233,12 +300,10 @@ def main():
                        help='Ideology variance for candidates')
     parser.add_argument('--quality-variance', type=float, default=0.01,
                        help='Quality variance for candidate generation')
-    parser.add_argument('--spread', type=float, default=0.4,
-                       help='Spread for partisan candidate generator')
-    parser.add_argument('--condorcet-variance', type=float, default=0.1,
+    parser.add_argument('--n-condorcet', type=int, default=1,
+                       help='Number of Condorcet candidates')
+    parser.add_argument('--condorcet-variance', type=float, default=0.05,
                        help='Ideology variance for Condorcet candidates')
-    parser.add_argument('--filter-balanced-candidates', action='store_true',
-                       help='Filter balanced candidates')
     # Toxicity parameters
     parser.add_argument('--toxic-bonus', type=float, default=0.25,
                        help='Ideology bonus for toxic tactics (moves toward extreme)')
@@ -279,8 +344,7 @@ def main():
     
     print(f"Testing {len(districts)} districts...")
     print(f"Election type: {args.election_type}")
-    print(f"Primary skew: {args.primary_skew}")
-    print(f"Candidates: {args.candidates} per party")
+    print(f"Candidates: {args.candidates} per party, {args.n_condorcet} Condorcet candidate {args.condorcet_variance} variance")
     print(f"Toxic bonus: {args.toxic_bonus}, penalty: {args.toxic_penalty}")
     print()
     
@@ -296,22 +360,53 @@ def main():
 
     
     for district in districts:
-        result = run_all_test(
-            district=district,
-            candidate_generator=candidate_generator,
-            config=config,
-            gaussian_generator=gaussian_generator,
-            election_type=args.election_type,
-            primary_skew=args.primary_skew,
-            toxic_bonus=args.toxic_bonus,
-            toxic_penalty=args.toxic_penalty,
-            nvoters=args.nvoters,
-            args=args
-        )
+        if args.test_type == 'twin':
+            result = run_twin_test(
+                district=district,
+                candidate_generator=candidate_generator,
+                config=config,
+                gaussian_generator=gaussian_generator,
+                election_type=args.election_type,
+                primary_skew=args.primary_skew,
+                toxic_bonus=args.toxic_bonus,
+                toxic_penalty=args.toxic_penalty,
+                nvoters=args.nvoters,
+                args=args
+            )
+            results.append(result)
+        elif args.test_type == 'non-toxic':
+            result = run_non_toxic_test(
+                district=district,
+                candidate_generator=candidate_generator,
+                config=config,
+                gaussian_generator=gaussian_generator,
+                election_type=args.election_type,
+                primary_skew=args.primary_skew,
+                toxic_bonus=args.toxic_bonus,
+                toxic_penalty=args.toxic_penalty,
+                nvoters=args.nvoters,
+                args=args
+            )
+        elif args.test_type == 'toxic':
+            result = run_all_test(
+                district=district,
+                candidate_generator=candidate_generator,
+                config=config,
+                gaussian_generator=gaussian_generator,
+                election_type=args.election_type,
+                primary_skew=args.primary_skew,
+                toxic_bonus=args.toxic_bonus,
+                toxic_penalty=args.toxic_penalty,
+                nvoters=args.nvoters,
+                args=args
+            )
+        else:
+            raise ValueError(f"Unknown test type: {args.test_type}")
+
         results.append(result)
         
         # Count results
-        if result['test_result'] in ['success', 'success_flip']:
+        if result['test_result'] == "success":
             all_stats['successes'] += 1
             if district.state in top2_states:
                 top2_stats['successes'] += 1
@@ -326,12 +421,7 @@ def main():
 
     
     # Print summary
-    print()
-    print("=" * 60)
-    if args.election_type == 'custom':
-        print_stats("Top-2 states", top2_stats)
-        print_stats("Other states", other_stats)
-    print_stats("All states  ", all_stats)
+    print_stats(f"All states {args.election_type:10s} {args.test_type:10s}", all_stats)
 
 
 if __name__ == "__main__":

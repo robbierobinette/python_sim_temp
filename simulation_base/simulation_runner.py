@@ -32,7 +32,7 @@ def parse_simulation_args(description: str = "Simulate congressional elections")
     parser.add_argument(
         "--candidates", 
         type=int,
-        default=3,
+        default=2,
         help="Number of candidates: per party for partisan/normal-partisan, total for random/condorcet (default: 3)"
     )
     parser.add_argument(
@@ -53,8 +53,8 @@ def parse_simulation_args(description: str = "Simulate congressional elections")
     )
     parser.add_argument(
         "--plot-dir", 
-        default="plots",
-        help="Directory to save plots (default: plots)"
+        default=None,
+        help="Directory to save plots (default: None)"
     )
     parser.add_argument(
         "--histogram-only", 
@@ -64,8 +64,8 @@ def parse_simulation_args(description: str = "Simulate congressional elections")
     parser.add_argument(
         "--nvoters", 
         type=int,
-        default=1000,
-        help="Number of voters per district (default: 1000)"
+        default=10000,
+        help="Number of voters per district (default: 10000)"
     )
     parser.add_argument(
         "--partisan-shift", 
@@ -104,12 +104,6 @@ def parse_simulation_args(description: str = "Simulate congressional elections")
         help="Ideology variance for candidates (default: 0.20)"
     )
     parser.add_argument(
-        "--spread", 
-        type=float,
-        default=0.4,
-        help="Spread for partisan candidate generator (default: 0.4)"
-    )
-    parser.add_argument(
         "--quality-variance", 
         type=float,
         default=0.0,
@@ -120,6 +114,18 @@ def parse_simulation_args(description: str = "Simulate congressional elections")
         type=int,
         default=1,
         help="Number of median/condorcet candidates to generate (default: 1)"
+    )
+    parser.add_argument(
+        "--iterations", 
+        type=int,
+        default=1,
+        help="Number of times to simulate each district (default: 1)"
+    )
+    parser.add_argument(
+        "--districts", 
+        type=str,
+        default=None,
+        help="Comma-separated list of district IDs to simulate (e.g., CA-01,NY-05,TX-10). If not specified, all districts are simulated."
     )
     
     return parser
@@ -144,7 +150,6 @@ def setup_simulation(args: argparse.Namespace) -> tuple:
         'condorcet_variance': args.condorcet_variance,
         'election_type': args.election_type,
         'ideology_variance': args.ideology_variance,
-        'spread': args.spread,
         'quality_variance': args.quality_variance,
         'partisan_shift': args.partisan_shift,
         'n_condorcet': args.n_condorcet
@@ -158,14 +163,17 @@ def setup_simulation(args: argparse.Namespace) -> tuple:
     return config, gaussian_generator
 
 
-def run_simulation(config, gaussian_generator, data_file: str, election_type: str, verbose: bool = False):
+def run_simulation(config, gaussian_generator, data_file: str, election_type: str, verbose: bool, iterations: int, districts_filter: str):
     """Run the simulation with given configuration."""
     from congressional_simulation import CongressionalSimulation
     
     simulation = CongressionalSimulation(
         config=config,
         gaussian_generator=gaussian_generator,
-        election_type=election_type
+        election_type=election_type,
+        verbose=verbose,
+        iterations=iterations,
+        districts_filter=districts_filter
     )
     
     if verbose:

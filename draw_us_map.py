@@ -33,10 +33,6 @@ def load_results(results_path: str) -> Optional[Dict[str, Any]]:
     try:
         with open(results_path, 'r') as f:
             data = json.load(f)
-        print(f"Loaded results from '{results_path}'")
-        print(f"  Total districts: {data.get('total_districts', 'unknown')}")
-        print(f"  Democratic wins: {data.get('democratic_wins', 'unknown')}")
-        print(f"  Republican wins: {data.get('republican_wins', 'unknown')}")
         return data
     except FileNotFoundError:
         print(f"Warning: Results file '{results_path}' not found")
@@ -214,7 +210,6 @@ def draw_us_map(
     if results_path:
         results_data = load_results(results_path)
     
-    print(f"Loading topojson data from '{topojson_path}'...")
     
     try:
         # Read the topojson file directly with geopandas
@@ -224,7 +219,6 @@ def draw_us_map(
         print(f"Error reading file with GeoPandas: {e}")
         return
     
-    print(f"Loaded {len(districts_gdf)} districts")
     
     # Find the GEOID column (matching MapController.ts behavior)
     geoid_col_name = None
@@ -237,8 +231,6 @@ def draw_us_map(
     if not geoid_col_name:
         print("Warning: Could not find a GEOID column in the data.")
         print(f"Available columns are: {districts_gdf.columns.tolist()}")
-    else:
-        print(f"Using GEOID column: '{geoid_col_name}'")
     
     # Set default color for all districts (lightgray with white borders)
     districts_gdf['color'] = 'lightgray'
@@ -247,7 +239,6 @@ def draw_us_map(
     # Color districts based on results data if available
     # ========================================================================
     if results_data and 'district_results' in results_data and colorization != 'none':
-        print(f"Processing results data for colorization: {colorization}")
         
         # Create a mapping from district to result data
         # Results JSON uses format like "AL-03", topojson OFFICE_ID uses "AL03"
@@ -264,7 +255,6 @@ def draw_us_map(
                 if district_id[-2:] == '01':
                     district_map[district_id[0:2] + '00'] = result
         
-        print(f"  Found results for {len(results_data['district_results'])} districts")
         
         # Apply colorization based on scheme
         colored_count = 0
@@ -287,10 +277,8 @@ def draw_us_map(
                         districts_gdf.at[idx, 'color'] = get_ideology_color(ideology)
                         colored_count += 1
         
-        print(f"  Colored {colored_count} districts using '{colorization}' scheme")
     # ========================================================================
     
-    print("Creating Altair chart...")
     
     # Create the base geographic chart
     districts_layer = alt.Chart(districts_gdf).mark_geoshape(
@@ -323,9 +311,7 @@ def draw_us_map(
             strokeWidth=0  # Remove border around the chart
         )
     
-    print(f"Saving map to '{output_path}'...")
     final_map.save(output_path)
-    print("Map saved successfully!")
 
 
 def main():

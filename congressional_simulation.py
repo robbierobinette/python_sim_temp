@@ -2,6 +2,7 @@
 Congressional simulation for all 435 districts.
 """
 import json
+import random
 from typing import List, Dict, Optional
 from dataclasses import dataclass, asdict
 from simulation_base.district_voting_record import DistrictVotingRecord
@@ -64,20 +65,34 @@ class CongressionalSimulationResult:
 class CongressionalSimulation:
     """Simulates elections for all 435 congressional districts."""
     
-    def __init__(self, config: Optional[UnitSimulationConfig] = None, 
-                 gaussian_generator: Optional[GaussianGenerator] = None,
-                 election_type: str = "primary"):
+    def __init__(self, config: Optional[UnitSimulationConfig], 
+                 gaussian_generator: Optional[GaussianGenerator],
+                 election_type: str,
+                 verbose: bool,
+                 iterations: int,
+                 districts_filter: Optional[str]):
         """Initialize congressional simulation.
         
         Args:
             config: Simulation configuration
             gaussian_generator: Random number generator
             election_type: Type of election ("primary", "irv", "condorcet")
+            verbose: Enable verbose output
+            iterations: Number of times to simulate each district
+            districts_filter: Comma-separated list of district IDs to simulate (None for all)
         """
         self.config = config or CongressionalSimulationConfigFactory.create_config(3)
         self.gaussian_generator = gaussian_generator
         self.election_type = election_type
         self.data_file = None  # Will be set when run_simulation is called
+        self.verbose = verbose
+        self.iterations = iterations
+        
+        # Parse districts filter if provided
+        if districts_filter:
+            self.districts_filter = [d.strip() for d in districts_filter.split(',')]
+        else:
+            self.districts_filter = None
     
     def load_districts(self, csv_file: str) -> List[DistrictVotingRecord]:
         """Load district data from CSV file."""
@@ -88,16 +103,16 @@ class CongressionalSimulation:
         """Simulate election for a single district."""
         # Create election process based on election type and state
         if self.election_type == "top-2":
-            election_process = ActualCustomElection(state_abbr='CA', primary_skew=self.config.primary_skew, debug=False)
+            election_process = ActualCustomElection(state_abbr='CA', primary_skew=self.config.primary_skew, debug=self.verbose)
         elif self.election_type == "primary":
-            election_process = ElectionWithPrimary(primary_skew=self.config.primary_skew, debug=False)
+            election_process = ElectionWithPrimary(primary_skew=self.config.primary_skew, debug=self.verbose)
         elif self.election_type == "condorcet":
-            election_process = CondorcetElection(debug=False)
+            election_process = CondorcetElection(debug=self.verbose)
         elif self.election_type == "irv":    # instant runoff
-            election_process = InstantRunoffElection(debug=False)
+            election_process = InstantRunoffElection(debug=self.verbose)
         elif self.election_type == "custom":
             # Use state abbreviation directly from district.state
-            election_process = ActualCustomElection(state_abbr=district.state, primary_skew=self.config.primary_skew, debug=False)
+            election_process = ActualCustomElection(state_abbr=district.state, primary_skew=self.config.primary_skew, debug=self.verbose)
         else:
             raise ValueError(f"Unknown election type: {self.election_type}")
         
@@ -211,31 +226,49 @@ class CongressionalSimulation:
     
     def simulate_all_districts(self, districts: List[DistrictVotingRecord]) -> CongressionalSimulationResult:
         """Simulate elections for all districts."""
+        # Filter districts if specified
+        if self.districts_filter:
+            filtered_districts = [d for d in districts if d.district in self.districts_filter]
+            if len(filtered_districts) == 0:
+                print(f"Warning: No districts matched filter {self.districts_filter}")
+                print(f"Available districts: {[d.district for d in districts[:10]]}...")
+            districts = filtered_districts
+        
+        # randomly shuffle the districts
+        random.seed(0)
+        random.shuffle(districts)
+
+
         district_results = []
         democratic_wins = 0
         republican_wins = 0
         other_wins = 0
         
-        print(f"Simulating {len(districts)} districts...")
+        total_simulations = len(districts) * self.iterations
+        print(f"Simulating {len(districts)} district(s) with {self.iterations} iteration(s) each ({total_simulations} total simulations)...")
         
+        simulation_count = 0
         for i, district in enumerate(districts):
-            if i % 50 == 0:
-                print(f"Progress: {i}/{len(districts)} districts")
-            
-            result = self.simulate_district(district)
-            district_results.append(result)
-            
-            # Count wins by party
-            if result.winner_party == "Dem":
-                democratic_wins += 1
-            elif result.winner_party == "Rep":
-                republican_wins += 1
-            else:
-                other_wins += 1
+            for iteration in range(self.iterations):
+                if simulation_count % 50 == 0:
+                    print(f"Progress: {simulation_count}/{total_simulations} simulations")
+                
+                result = self.simulate_district(district)
+                district_results.append(result)
+                
+                # Count wins by party
+                if result.winner_party == "Dem":
+                    democratic_wins += 1
+                elif result.winner_party == "Rep":
+                    republican_wins += 1
+                else:
+                    other_wins += 1
+                
+                simulation_count += 1
         
         return CongressionalSimulationResult(
             config_label=self.config.label,
-            total_districts=len(districts),
+            total_districts=total_simulations,
             democratic_wins=democratic_wins,
             republican_wins=republican_wins,
             other_wins=other_wins,
@@ -249,19 +282,21 @@ class CongressionalSimulation:
         return self.simulate_all_districts(districts)
     
     def save_results(self, result: CongressionalSimulationResult, filename: str) -> None:
+        seen_districts = set[str]()
+        filtered_results = []
+        # only save one result per district
+        for dr in result.district_results:
+            if dr.district not in seen_districts:
+                filtered_results.append(dr)
+                seen_districts.add(dr.district) 
+        result.district_results = filtered_results
+
         """Save simulation results to JSON file."""
         with open(filename, 'w', encoding='utf-8') as f:
             json.dump(asdict(result), f, indent=2, default=str)
+        return result
     
     def print_summary(self, result: CongressionalSimulationResult) -> None:
-        """Print summary of simulation results."""
-        print("\n=== Congressional Simulation Results ===")
-        print(f"Configuration: {result.config_label}")
-        print(f"Total Districts: {result.total_districts}")
-        print(f"Democratic Wins: {result.democratic_wins} ({result.democratic_percentage:.1f}%)")
-        print(f"Republican Wins: {result.republican_wins} ({result.republican_percentage:.1f}%)")
-        print(f"Other Wins: {result.other_wins}")
-        
         # Calculate average voter satisfaction
         avg_satisfaction = sum(dr.voter_satisfaction for dr in result.district_results) / len(result.district_results)
         print(f"Average Voter Satisfaction: {avg_satisfaction:.3f}")
@@ -274,8 +309,9 @@ class CongressionalSimulation:
         for candidate_name, count in sorted_candidates:
             print(f"{candidate_name}: {count}")
         
-        # Show some interesting districts
-        print("\n=== Sample Results ===")
-        for i, dr in enumerate(result.district_results[:10]):
-            print(f"{dr.district}: {dr.winner_party} {dr.winner_name} "
-                  f"(Lean: {dr.expected_lean:+.1f}, Satisfaction: {dr.voter_satisfaction:.3f})")
+        # show the winners
+        if self.verbose:
+            print("\n=== Sample Results ===")
+            for i, dr in enumerate(result.district_results):
+                print(f"{dr.district}: {dr.winner_party} {dr.winner_name} "
+                    f"(Lean: {dr.expected_lean:+.1f}, Satisfaction: {dr.voter_satisfaction:.3f})")

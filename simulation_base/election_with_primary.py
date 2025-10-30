@@ -143,7 +143,7 @@ class ElectionWithPrimary(ElectionProcess):
     def _run_primary(self, candidates: List[Candidate], ballots: List[RCVBallot]) -> ElectionResult:
         """Run a primary election."""
         # Use simple plurality for primaries
-        primary_process = SimplePlurality()
+        primary_process = SimplePlurality(debug=self.debug)
         return primary_process.run(candidates, ballots)
     
     def _run_general(self, candidates: List[Candidate], ballots: List[RCVBallot]) -> ElectionResult:

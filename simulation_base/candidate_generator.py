@@ -42,41 +42,30 @@ class CandidateGenerator(ABC):
     
     def get_primary_offset(self, state_abbr: str, party_tag: PopulationTag, election_type: str) -> float:
         """
-        Get the primary offset for a given state and party.
-        
-        Returns -0.2 for Republicans and 0.2 for Democrats if the state has:
-        - A top-2 primary, OR
-        - An open primary with no runoff
-        
-        Otherwise returns 0.0.
-        
-        Args:
-            state_abbr: Two-letter state abbreviation (e.g., "CA", "WA")
-            party_tag: The party tag (DEMOCRATS or REPUBLICANS)
-        
-        Returns:
-            The offset value for the primary
+        Some election types have more independent voters, which moves the center of the primary
+        electorate towards the center slightly. Offset the candidates' ideologies by 0.1 to 
+        the left or right to account for this.
         """
 
+        offset = False
         if election_type == "custom":
             self._load_election_types()
             state_info = self._election_types_by_state.get(state_abbr)
             primary_type = state_info['primary']
-            has_runoff = state_info['primary_runoff']
+            if not state_info['primary_runoff']:
+                if primary_type in ["open-partisan", "semi-closed-partisan"]:
+                    offset = True
         elif election_type == "top-2":
-            primary_type = "top-2"
-            has_runoff = False
+            offset = True
+        
+        offset_amount = 0.1
+        if offset:
+            if party_tag == REPUBLICANS:
+                return -offset_amount
+            elif party_tag == DEMOCRATS:
+                return offset_amount
         else:
             return 0.0
-
-        
-        if primary_type == "top-2" or (primary_type == "open" and not has_runoff):
-            if party_tag == REPUBLICANS:
-                return -0.2
-            elif party_tag == DEMOCRATS:
-                return 0.2
-        
-        return 0.0
     
     @abstractmethod
     def candidates(self, population: CombinedPopulation, election_type: str) -> List[Candidate]:
