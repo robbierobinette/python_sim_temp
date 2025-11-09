@@ -234,11 +234,6 @@ class CongressionalSimulation:
                 print(f"Available districts: {[d.district for d in districts[:10]]}...")
             districts = filtered_districts
         
-        # randomly shuffle the districts
-        random.seed(0)
-        random.shuffle(districts)
-
-
         district_results = []
         democratic_wins = 0
         republican_wins = 0

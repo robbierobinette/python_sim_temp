@@ -132,22 +132,26 @@ def run_non_toxic_test(district: DistrictVotingRecord,
     election_process = create_election_process(election_type, district, primary_skew, args)
     base_candidates = candidate_generator.candidates(population, election_type)
     toxic_candidates = [apply_toxic_tactics(c, toxic_bonus, toxic_penalty) for c in base_candidates]
+    toxic_result = run_election(toxic_candidates, population, election_process, config, gaussian_generator)
+    toxic_winner = toxic_result.winner()
     results = []
     for i, c in enumerate(toxic_candidates):
         new_candidates = toxic_candidates.copy()
+        # new_candidates.append(base_candidates[i])
         new_candidates[i] = base_candidates[i]
         result = run_election(new_candidates, population, election_process, config, gaussian_generator)
         results.append(result)
         winner = result.winner()
         if "toxic" not in winner.name:
+            if args.verbose:
+                print(f"Toxic Failure:  District: {district.district} Lean: {district.expected_lean}")
             return {
                 'district': district.district,
                 'lean': district.expected_lean,
                 'test_result': 'failure',
             }
 
-    if args.verbose:
-        print(f"Toxic Failure:  District: {district.district} Lean: {district.expected_lean}")
+    
 
     return {
         'district': district.district,

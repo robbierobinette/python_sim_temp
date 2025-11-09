@@ -104,7 +104,7 @@ def get_ideology_color(ideology: float, gradient_min: float = -1.5, gradient_max
     return mcolors.rgb2hex(rgb)
 
 
-def create_gradient_scale(height: int = 400) -> alt.Chart:
+def create_gradient_scale(height: int = 400, font_size: int = 24) -> alt.Chart:
     """
     Create a vertical gradient scale for the representation colormap.
     
@@ -113,6 +113,7 @@ def create_gradient_scale(height: int = 400) -> alt.Chart:
     
     Args:
         height: Height of the gradient scale in pixels
+        font_size: Font size for scale labels and title
         
     Returns:
         Altair chart object containing the gradient scale
@@ -155,7 +156,7 @@ def create_gradient_scale(height: int = 400) -> alt.Chart:
     # Create text labels
     labels = alt.Chart(label_data).mark_text(
         align='left',
-        fontSize=12
+        fontSize=font_size
     ).encode(
         y=alt.Y('value:Q', 
                 axis=None,
@@ -172,7 +173,7 @@ def create_gradient_scale(height: int = 400) -> alt.Chart:
         title=alt.TitleParams(
             text='Representation %',
             anchor='middle',
-            fontSize=13,
+            fontSize=font_size + 2,
             offset=10
         )
     )
@@ -187,7 +188,8 @@ def draw_us_map(
     colorization: str = "none",
     title: str = "US Congressional Districts (119th Congress)",
     width: int = 950,
-    height: int = 550
+    height: int = 550,
+    title_font_size: int = 26
 ):
     """
     Draw a map of US congressional districts using AlbersUSA projection.
@@ -204,6 +206,7 @@ def draw_us_map(
         title: Title for the map
         width: Width of the output map in pixels
         height: Height of the output map in pixels
+        title_font_size: Font size for the title and scale (default: 26)
     """
     # Load results data if provided
     results_data = None
@@ -287,7 +290,7 @@ def draw_us_map(
     ).encode(
         color=alt.Color('color:N', scale=None)  # Use colors as-is, no scale transformation
     ).properties(
-        title=title
+        title=alt.TitleParams(text=title, fontSize=title_font_size)
     )
     
     # Apply the albersUsa projection (this is the key!)
@@ -302,7 +305,7 @@ def draw_us_map(
     
     # Add gradient scale on the left if using representation colorization
     if colorization == 'representation':
-        gradient_scale = create_gradient_scale(height=height)
+        gradient_scale = create_gradient_scale(height=height, font_size=title_font_size - 2)
         final_map = alt.hconcat(gradient_scale, map_chart, spacing=20).configure_view(
             strokeWidth=0  # Remove border around the chart
         )
@@ -364,6 +367,12 @@ def main():
         choices=['none', 'representation', 'winner_ideology'],
         help='Colorization scheme: none (gray), representation (satisfaction gradient), or winner_ideology (ideology gradient)'
     )
+    parser.add_argument(
+        '--font-size',
+        type=int,
+        default=30,
+        help='Font size for title and scale (default: 30)'
+    )
     
     args = parser.parse_args()
     
@@ -388,7 +397,8 @@ def main():
         colorization=args.colorization,
         title=args.title,
         width=args.width,
-        height=args.height
+        height=args.height,
+        title_font_size=args.font_size
     )
 
 

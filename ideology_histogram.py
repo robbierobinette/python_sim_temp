@@ -44,7 +44,8 @@ class IdeologyHistogram:
                  domain_max: float = None,
                  gradient_min: float = -1.5,
                  gradient_max: float = 1.5,
-                 title: str = "Histogram"):
+                 title: str = "Histogram",
+                 title_font_size: int = 14):
         """
         Initialize the histogram parameters.
         
@@ -57,6 +58,7 @@ class IdeologyHistogram:
             gradient_min: Minimum value for blue in gradient (default: -1.5)
             gradient_max: Maximum value for red in gradient (default: 1.5)
             title: Title for the histogram (default: "Histogram")
+            title_font_size: Font size for the title (default: 14)
         """
         self.width = width
         self.height = height
@@ -67,6 +69,7 @@ class IdeologyHistogram:
         self.gradient_min = gradient_min
         self.gradient_max = gradient_max
         self.title = title
+        self.title_font_size = title_font_size
         
         # Calculate layout parameters similar to TypeScript code
         self.diameter = 2 * self.radius
@@ -209,7 +212,7 @@ class IdeologyHistogram:
         # Remove y-axis tick labels but keep the axis
         ax.set_yticks([])
         ax.set_ylabel('Count', fontsize=12)
-        ax.set_title(self.title, fontsize=14, fontweight='bold')
+        ax.set_title(self.title, fontsize=self.title_font_size, fontweight='bold')
         
         # No legend needed for gradient coloring
         
@@ -289,6 +292,8 @@ def main():
                        help='Labels for the histogram (default: is numeric lables if not specified)')
     parser.add_argument('--nominate', action='store_true',
                        help='Use nominate_dim1 values instead of winner_ideology (typically ranges from -1 to 1)')
+    parser.add_argument('--title-font-size', type=int, default=14,
+                       help='Font size for the title (default: 14)')
     
     args = parser.parse_args()
     
@@ -311,7 +316,8 @@ def main():
                     domain_max=args.max, 
                     gradient_min=gradient_min,
                     gradient_max=gradient_max,
-                    title=args.title)
+                    title=args.title,
+                    title_font_size=args.title_font_size)
     
     try:
         # Load data from JSON file
