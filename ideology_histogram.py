@@ -15,6 +15,7 @@ Output:
 """
 
 import json
+import csv
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -42,8 +43,8 @@ class IdeologyHistogram:
                  radius: float = 12.0,
                  domain_min: float = None,
                  domain_max: float = None,
-                 gradient_min: float = -1.5,
-                 gradient_max: float = 1.5,
+                 gradient_min: float = -1.0,
+                 gradient_max: float = 1.0,
                  title: str = "Histogram",
                  title_font_size: int = 14):
         """
@@ -268,10 +269,71 @@ def load_ideology_data(filename: str, use_nominate: bool = False) -> Tuple[List[
     return values, party
 
 
+def parse_partisan_lean(pvi_string: str) -> float:
+    """Parse Cook PVI string to numeric value.
+    
+    Converts:
+        R+NN -> NN (positive)
+        D+NN -> -NN (negative)
+        EVEN -> 0
+    
+    Args:
+        pvi_string: String like "R+27", "D+5", or "EVEN"
+    
+    Returns:
+        Numeric value representing partisan lean
+    """
+    pvi_string = pvi_string.strip()
+    
+    if pvi_string == "EVEN":
+        return 0.0
+    
+    if pvi_string.startswith("R+"):
+        return float(pvi_string[2:])
+    elif pvi_string.startswith("D+"):
+        return -float(pvi_string[2:])
+    else:
+        # Handle edge cases
+        print(f"Warning: Unknown PVI format: {pvi_string}, treating as 0")
+        return 0.0
+
+
+def load_partisan_lean_data(filename: str) -> Tuple[List[float], List[str]]:
+    """Load partisan lean data from Cook Political Data CSV file.
+    
+    Args:
+        filename: Path to CSV file with Cook Political Data
+    
+    Returns:
+        Tuple of (values, party_labels)
+    """
+    values = []
+    party = []
+    
+    with open(filename, 'r', encoding='utf-8') as f:
+        reader = csv.reader(f)
+        next(reader)  # Skip header row
+        
+        for row in reader:
+            if len(row) >= 5:  # Ensure we have enough columns
+                # Column 3 is party (0-based: State, Number, Member, Party, 2025 Cook PVI)
+                # Column 4 is the Cook PVI
+                party_label = row[3].strip()
+                pvi_string = row[4].strip()
+                
+                # Parse the PVI string to numeric value
+                lean_value = parse_partisan_lean(pvi_string)
+                
+                values.append(lean_value)
+                party.append(party_label)
+    
+    return values, party
+
+
 def main():
     """Main function to generate the ideology histogram."""
     # Set up command line argument parsing
-    parser = argparse.ArgumentParser(description='Generate ideology histogram from JSON file')
+    parser = argparse.ArgumentParser(description='Generate ideology histogram from JSON file or partisan lean CSV')
     parser.add_argument('json_file', nargs='?', default='results-actual.json',
                        help='JSON file containing ideology data (default: results-actual.json)')
     parser.add_argument('-o', '--output', default=None,
@@ -292,10 +354,22 @@ def main():
                        help='Labels for the histogram (default: is numeric lables if not specified)')
     parser.add_argument('--nominate', action='store_true',
                        help='Use nominate_dim1 values instead of winner_ideology (typically ranges from -1 to 1)')
+    parser.add_argument('--partisan-lean', action='store_true',
+                       help='Use partisan lean data from CookPoliticalData.csv (ranges from -50 to 50)')
     parser.add_argument('--title-font-size', type=int, default=14,
                        help='Font size for the title (default: 14)')
     
     args = parser.parse_args()
+    
+    # Adjust defaults for partisan-lean mode
+    if args.partisan_lean:
+        # If min/max are at defaults, adjust them for partisan lean range (-50 to +50)
+        if args.min == -2.5 and args.max == 2.5:
+            args.min = -50.0
+            args.max = 50.0
+        # Update xlabel default if not explicitly set
+        if args.xlabel == 'Member Partisanship':
+            args.xlabel = 'District Partisan Lean'
     
     # Adjust defaults for nominate mode
     if args.nominate:
@@ -309,6 +383,10 @@ def main():
     if args.nominate:
         gradient_min = -0.5
         gradient_max = 0.5
+    elif args.partisan_lean:
+        # For partisan lean, use appropriate gradient range
+        gradient_min = -25.0
+        gradient_max = 25.0
 
     # Create histogram generator with custom domain and radius
     histogram = IdeologyHistogram(radius=args.radius, 
@@ -320,12 +398,20 @@ def main():
                     title_font_size=args.title_font_size)
     
     try:
-        # Load data from JSON file
-        values, party = load_ideology_data(args.json_file, use_nominate=args.nominate)
+        # Load data from appropriate source
+        if args.partisan_lean:
+            # Load partisan lean data from CSV
+            csv_file = 'CookPoliticalData.csv'
+            values, party = load_partisan_lean_data(csv_file)
+        else:
+            # Load data from JSON file
+            values, party = load_ideology_data(args.json_file, use_nominate=args.nominate)
         
         # Check if we have any data
         if len(values) == 0:
-            if args.nominate:
+            if args.partisan_lean:
+                print("Error: No partisan lean data found in CookPoliticalData.csv")
+            elif args.nominate:
                 print("Error: No nominate_dim1 values found in the JSON file.")
                 print("The --nominate flag requires data with nominate_dim1 fields.")
                 print("Try running without --nominate to use winner_ideology values instead.")
@@ -342,7 +428,11 @@ def main():
             ideology_values = None  # User-provided labels, evenly distribute them
         else:
             # Generate numeric labels based on mode
-            if args.nominate:
+            if args.partisan_lean:
+                # For partisan lean mode, use D+40 to R+40 range
+                ideology_labels = ['D+40', 'D+20', 'EVEN', 'R+20', 'R+40']
+                ideology_values = [-40.0, -20.0, 0.0, 20.0, 40.0]
+            elif args.nominate:
                 # For nominate mode, use -1 to 1 range
                 ideology_labels = ['-1.0', '-0.5', '0.0', '0.5', '1.0']
                 ideology_values = [-1.0, -0.5, 0.0, 0.5, 1.0]
@@ -355,7 +445,10 @@ def main():
         histogram.create_histogram(data_points, ideology_labels, ideology_values, args.output, args.display, args.xlabel)
         
     except FileNotFoundError:
-        print(f"Error: {args.json_file} not found.")
+        if args.partisan_lean:
+            print("Error: CookPoliticalData.csv not found.")
+        else:
+            print(f"Error: {args.json_file} not found.")
         sys.exit(1)
     except Exception as e:
         print(f"Error generating histogram: {e}")
